@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
-import 'dart:io' show Platform;
 import 'providers/app_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/book_provider.dart';
@@ -37,9 +36,9 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    print('Firebase initialized successfully');
+    debugPrint('Firebase initialized successfully');
   } catch (e) {
-    print('Error initializing Firebase: $e');
+    debugPrint('Error initializing Firebase: $e');
     // Continue running the app even if Firebase fails to initialize
   }
 
@@ -61,22 +60,20 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create:
-              (_) => AppProvider(
-                authService: authService,
-                bookService: bookService,
-                cartService: cartService,
-                orderService: orderService,
-                userService: userService,
-                firestore: firestoreInstance,
-              ),
+          create: (_) => AppProvider(
+            authService: authService,
+            bookService: bookService,
+            cartService: cartService,
+            orderService: orderService,
+            userService: userService,
+            firestore: firestoreInstance,
+          ),
         ),
         ChangeNotifierProvider(
-          create:
-              (_) => AuthProvider(
-                authService: authService,
-                userService: userService,
-              ),
+          create: (_) => AuthProvider(
+            authService: authService,
+            userService: userService,
+          ),
         ),
         ChangeNotifierProvider(
           create: (_) => BookProvider(bookService: bookService),

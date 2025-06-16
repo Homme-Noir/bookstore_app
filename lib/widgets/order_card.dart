@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/book.dart';
 import '../models/order.dart' as model;
+import 'package:intl/intl.dart';
 
 class OrderCard extends StatelessWidget {
   final model.Order order;
@@ -23,26 +24,42 @@ class OrderCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Order #${order.id.substring(0, 8)}',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    'Order #${order.id}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  _buildStatusChip(context),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Color(int.parse(_getStatusColor(order.status)
+                          .replaceAll('#', '0xFF'))),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      _getStatusText(order.status),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                'Total: \$${order.totalAmount.toStringAsFixed(2)}',
-                style: Theme.of(context).textTheme.bodyLarge,
+                'Date: ${DateFormat('MMM dd, yyyy').format(order.createdAt)}',
+                style: const TextStyle(color: Colors.grey),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Text(
-                'Items: ${order.items.length}',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Date: ${_formatDate(order.createdAt)}',
-                style: Theme.of(context).textTheme.bodyMedium,
+                'Total: \$${order.total.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -51,43 +68,25 @@ class OrderCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusChip(BuildContext context) {
-    Color color;
-    switch (order.status.toLowerCase()) {
-      case 'pending':
-        color = Colors.orange;
-        break;
-      case 'processing':
-        color = Colors.blue;
-        break;
-      case 'shipped':
-        color = Colors.purple;
-        break;
-      case 'delivered':
-        color = Colors.green;
-        break;
-      case 'cancelled':
-        color = Colors.red;
-        break;
+  String _getStatusColor(model.OrderStatus status) {
+    switch (status) {
+      case model.OrderStatus.pending:
+        return '#FFA500';
+      case model.OrderStatus.processing:
+        return '#1E90FF';
+      case model.OrderStatus.shipped:
+        return '#32CD32';
+      case model.OrderStatus.delivered:
+        return '#008000';
+      case model.OrderStatus.cancelled:
+        return '#FF0000';
       default:
-        color = Colors.grey;
+        return '#808080';
     }
-
-    return Chip(
-      label: Text(
-        order.status.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      backgroundColor: color,
-    );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+  String _getStatusText(model.OrderStatus status) {
+    return status.toString().split('.').last;
   }
 }
 
