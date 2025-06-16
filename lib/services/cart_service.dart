@@ -1,57 +1,41 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/cart_item.dart';
 import '../models/book.dart';
-
-class CartItem {
-  final String bookId;
-  final String title;
-  final String coverImage;
-  final double price;
-  final int quantity;
-
-  const CartItem({
-    required this.bookId,
-    required this.title,
-    required this.coverImage,
-    required this.price,
-    required this.quantity,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'bookId': bookId,
-      'title': title,
-      'coverImage': coverImage,
-      'price': price,
-      'quantity': quantity,
-    };
-  }
-
-  factory CartItem.fromMap(Map<String, dynamic> map) {
-    return CartItem(
-      bookId: map['bookId'] as String,
-      title: map['title'] as String,
-      coverImage: map['coverImage'] as String,
-      price: (map['price'] as num).toDouble(),
-      quantity: map['quantity'] as int,
-    );
-  }
-}
 
 class CartService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Stream<List<CartItem>> getCartItems(String userId) {
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('cart')
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => CartItem.fromMap(doc.data()))
-            .toList());
+  String _getCurrentUserId() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    return user.uid;
   }
 
-  Future<void> addToCart(String userId, Book book, int quantity) async {
+  Future<List<CartItem>> getCartItems() async {
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(_getCurrentUserId())
+        .collection('cart')
+        .get();
+    return snapshot.docs.map((doc) => CartItem.fromMap(doc.data())).toList();
+  }
+
+  Stream<List<CartItem>> getCartStream() {
+    return _firestore
+        .collection('users')
+        .doc(_getCurrentUserId())
+        .collection('cart')
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => CartItem.fromMap(doc.data())).toList());
+  }
+
+  Future<void> addToCart(String bookId, int quantity) async {
+    final book = await _getBook(bookId);
     final cartItem = CartItem(
       bookId: book.id,
       title: book.title,
@@ -62,36 +46,46 @@ class CartService {
 
     await _firestore
         .collection('users')
-        .doc(userId)
+        .doc(_getCurrentUserId())
         .collection('cart')
-        .doc(book.id)
+        .doc(bookId)
         .set(cartItem.toMap());
   }
 
-  Future<void> removeFromCart(String userId, String bookId) async {
+  Future<void> updateQuantity(String bookId, int quantity) async {
     await _firestore
         .collection('users')
-        .doc(userId)
-        .collection('cart')
-        .doc(bookId)
-        .delete();
-  }
-
-  Future<void> updateCartItemQuantity(
-      String userId, String bookId, int quantity) async {
-    await _firestore
-        .collection('users')
-        .doc(userId)
+        .doc(_getCurrentUserId())
         .collection('cart')
         .doc(bookId)
         .update({'quantity': quantity});
   }
 
-  Future<void> clearCart(String userId) async {
-    final cartRef = _firestore.collection('users').doc(userId).collection('cart');
+  Future<void> removeFromCart(String bookId) async {
+    await _firestore
+        .collection('users')
+        .doc(_getCurrentUserId())
+        .collection('cart')
+        .doc(bookId)
+        .delete();
+  }
+
+  Future<void> clearCart() async {
+    final cartRef = _firestore
+        .collection('users')
+        .doc(_getCurrentUserId())
+        .collection('cart');
     final snapshot = await cartRef.get();
     for (var doc in snapshot.docs) {
       await doc.reference.delete();
     }
   }
-} 
+
+  Future<Book> _getBook(String bookId) async {
+    final doc = await _firestore.collection('books').doc(bookId).get();
+    if (!doc.exists) {
+      throw Exception('Book not found');
+    }
+    return Book.fromFirestore(doc);
+  }
+}

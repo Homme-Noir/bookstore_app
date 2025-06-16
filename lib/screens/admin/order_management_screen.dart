@@ -13,40 +13,65 @@ class OrderManagementScreen extends StatelessWidget {
         title: const Text('Manage Orders'),
       ),
       body: StreamBuilder<List<Order>>(
-        stream: context.read<AppProvider>().getAllOrders(),
+        stream: context.read<AppProvider>().getAllOrdersStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+
           if (snapshot.hasError) {
-            return Center(child: Text('Error: \\${snapshot.error}'));
+            return Center(
+              child: Text('Error: ${snapshot.error}'),
+            );
           }
+
           final orders = snapshot.data ?? [];
+
           if (orders.isEmpty) {
-            return const Center(child: Text('No orders found'));
+            return const Center(
+              child: Text('No orders found'),
+            );
           }
+
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: orders.length,
             itemBuilder: (context, index) {
               final order = orders[index];
               return Card(
-                margin: const EdgeInsets.only(bottom: 12),
+                margin: const EdgeInsets.only(bottom: 16),
                 child: ListTile(
-                  title: Text('Order #${order.id.substring(0, 8)}'),
-                  subtitle: Text('Status: ${order.status.name}\nTotal: \\$${order.total.toStringAsFixed(2)}'),
-                  trailing: PopupMenuButton<OrderStatus>(
-                    icon: const Icon(Icons.edit),
-                    onSelected: (status) {
-                      context.read<AppProvider>().updateOrderStatus(order.id, status);
-                    },
-                    itemBuilder: (context) => OrderStatus.values
-                        .map((status) => PopupMenuItem(
-                              value: status,
-                              child: Text(status.name),
-                            ))
-                        .toList(),
+                  title: Text('Order #${order.id}'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Status: ${order.status.name}'),
+                      Text('Total: \$${order.totalAmount.toStringAsFixed(2)}'),
+                    ],
                   ),
+                  trailing: DropdownButton<OrderStatus>(
+                    value: order.status,
+                    items: OrderStatus.values.map((status) {
+                      return DropdownMenuItem(
+                        value: status,
+                        child: Text(status.name),
+                      );
+                    }).toList(),
+                    onChanged: (newStatus) {
+                      if (newStatus != null) {
+                        context
+                            .read<AppProvider>()
+                            .updateOrderStatus(order.id, newStatus);
+                      }
+                    },
+                  ),
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/order-details',
+                      arguments: order,
+                    );
+                  },
                 ),
               );
             },
@@ -55,4 +80,4 @@ class OrderManagementScreen extends StatelessWidget {
       ),
     );
   }
-} 
+}

@@ -36,15 +36,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     try {
       // TODO: Integrate with actual payment gateway
-      await Future.delayed(const Duration(seconds: 2)); // Simulate payment processing
-      
+      await Future.delayed(
+          const Duration(seconds: 2)); // Simulate payment processing
+
       await context.read<AppProvider>().updateOrderStatus(
-        widget.order.id,
-        OrderStatus.processing,
-      );
+            widget.order.id,
+            OrderStatus.processing,
+          );
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/order-success', arguments: widget.order);
+      Navigator.of(context)
+          .pushReplacementNamed('/order-success', arguments: widget.order);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -79,100 +81,26 @@ class _PaymentScreenState extends State<PaymentScreen> {
         title: const Text('Payment'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _OrderSummaryCard(order: widget.order),
-            const SizedBox(height: 24),
             const Text(
               'Select Payment Method',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
-            _PaymentMethodCard(
-              title: 'Credit Card',
-              icon: Icons.credit_card,
-              isSelected: _selectedPaymentMethod == 'credit_card',
-              onTap: () {
-                setState(() => _selectedPaymentMethod = 'credit_card');
-              },
-            ),
-            _PaymentMethodCard(
-              title: 'PayPal',
-              icon: Icons.payment,
-              isSelected: _selectedPaymentMethod == 'paypal',
-              onTap: () {
-                setState(() => _selectedPaymentMethod = 'paypal');
-              },
-            ),
-            _PaymentMethodCard(
-              title: 'Apple Pay',
-              icon: Icons.apple,
-              isSelected: _selectedPaymentMethod == 'apple_pay',
-              onTap: () {
-                setState(() => _selectedPaymentMethod = 'apple_pay');
-              },
-            ),
+            _buildPaymentMethodSelector(),
+            const SizedBox(height: 24),
             if (_selectedPaymentMethod == 'credit_card') ...[
-              const SizedBox(height: 24),
-              const Text(
-                'Card Details',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _cardNumberController,
-                decoration: const InputDecoration(
-                  labelText: 'Card Number',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                maxLength: 16,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _expiryController,
-                      decoration: const InputDecoration(
-                        labelText: 'MM/YY',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLength: 5,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextField(
-                      controller: _cvvController,
-                      decoration: const InputDecoration(
-                        labelText: 'CVV',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      maxLength: 3,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Cardholder Name',
-                  border: OutlineInputBorder(),
-                ),
-              ),
+              _buildCreditCardForm(),
             ],
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
+            _buildOrderSummary(),
+            const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -187,48 +115,146 @@ class _PaymentScreenState extends State<PaymentScreen> {
       ),
     );
   }
-}
 
-class _OrderSummaryCard extends StatelessWidget {
-  final Order order;
+  Widget _buildPaymentMethodSelector() {
+    return Column(
+      children: [
+        RadioListTile<String>(
+          title: const Text('Credit Card'),
+          value: 'credit_card',
+          groupValue: _selectedPaymentMethod,
+          onChanged: (value) {
+            setState(() => _selectedPaymentMethod = value!);
+          },
+        ),
+        RadioListTile<String>(
+          title: const Text('PayPal'),
+          value: 'paypal',
+          groupValue: _selectedPaymentMethod,
+          onChanged: (value) {
+            setState(() => _selectedPaymentMethod = value!);
+          },
+        ),
+        RadioListTile<String>(
+          title: const Text('Cash on Delivery'),
+          value: 'cash_on_delivery',
+          groupValue: _selectedPaymentMethod,
+          onChanged: (value) {
+            setState(() => _selectedPaymentMethod = value!);
+          },
+        ),
+      ],
+    );
+  }
 
-  const _OrderSummaryCard({required this.order});
+  Widget _buildCreditCardForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _cardNumberController,
+          decoration: const InputDecoration(
+            labelText: 'Card Number',
+            hintText: '1234 5678 9012 3456',
+          ),
+          keyboardType: TextInputType.number,
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _expiryController,
+                decoration: const InputDecoration(
+                  labelText: 'Expiry Date',
+                  hintText: 'MM/YY',
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextField(
+                controller: _cvvController,
+                decoration: const InputDecoration(
+                  labelText: 'CVV',
+                  hintText: '123',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _nameController,
+          decoration: const InputDecoration(
+            labelText: 'Cardholder Name',
+            hintText: 'John Doe',
+          ),
+        ),
+      ],
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildOrderSummary() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Order Summary',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
-            _SummaryRow(
-              label: 'Subtotal',
-              value: order.subtotal,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Subtotal'),
+                Text('\$${widget.order.subtotal.toStringAsFixed(2)}'),
+              ],
             ),
+            if (widget.order.shippingCost != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Shipping'),
+                  Text('\$${widget.order.shippingCost!.toStringAsFixed(2)}'),
+                ],
+              ),
+            ],
+            if (widget.order.tax != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Tax'),
+                  Text('\$${widget.order.tax!.toStringAsFixed(2)}'),
+                ],
+              ),
+            ],
             const Divider(),
-            _SummaryRow(
-              label: 'Shipping',
-              value: order.shippingCost,
-            ),
-            const Divider(),
-            _SummaryRow(
-              label: 'Tax',
-              value: order.tax,
-            ),
-            const Divider(),
-            _SummaryRow(
-              label: 'Total',
-              value: order.total,
-              isTotal: true,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Total',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '\$${widget.order.total.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -236,90 +262,3 @@ class _OrderSummaryCard extends StatelessWidget {
     );
   }
 }
-
-class _SummaryRow extends StatelessWidget {
-  final String label;
-  final double value;
-  final bool isTotal;
-
-  const _SummaryRow({
-    required this.label,
-    required this.value,
-    this.isTotal = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: isTotal ? 18 : 16,
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-          Text(
-            '\$${value.toStringAsFixed(2)}',
-            style: TextStyle(
-              fontSize: isTotal ? 18 : 16,
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: isTotal ? Colors.green : null,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PaymentMethodCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _PaymentMethodCard({
-    required this.title,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                color: isSelected ? Theme.of(context).primaryColor : null,
-              ),
-              const SizedBox(width: 16),
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-              const Spacer(),
-              if (isSelected)
-                Icon(
-                  Icons.check_circle,
-                  color: Theme.of(context).primaryColor,
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-} 

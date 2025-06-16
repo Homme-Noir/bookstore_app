@@ -5,14 +5,18 @@ import '../models/user_data.dart';
 import '../services/user_service.dart';
 
 class AuthProvider with ChangeNotifier {
-  final AuthService _authService = AuthService();
-  final UserService _userService = UserService();
+  final AuthService _authService;
+  final UserService _userService;
   User? _user;
   UserData? _userData;
   bool _isLoading = false;
   String? _error;
 
-  AuthProvider() {
+  AuthProvider({
+    required AuthService authService,
+    required UserService userService,
+  }) : _authService = authService,
+       _userService = userService {
     _init();
   }
 
@@ -114,4 +118,4 @@ class AuthProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
   }
-} 
+}

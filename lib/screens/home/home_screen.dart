@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/app_provider.dart';
-import 'auth/login_screen.dart';
-import 'store/store_screen.dart';
-import 'profile/profile_screen.dart';
+import '../../providers/app_provider.dart';
+import '../auth/login_screen.dart';
+import '../store/store_screen.dart';
+import '../store/cart.dart';
+import '../profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,18 +31,12 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: (index) => setState(() => _currentIndex = index),
         type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.book),
-            label: 'Store',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Store'),
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_cart),
             label: 'Cart',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
@@ -54,7 +49,7 @@ class AuthWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appProvider = context.watch<AppProvider>();
-    
+
     if (appProvider.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -65,4 +60,4 @@ class AuthWrapper extends StatelessWidget {
 
     return const LoginScreen();
   }
-} 
+}

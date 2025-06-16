@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../models/book.dart';
-import '../../models/review.dart';
 
 class BookDetailsScreen extends StatefulWidget {
   final Book book;
@@ -31,9 +30,8 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
   }
 
   Future<void> _checkWishlistStatus() async {
-    final isInWishlist = context
-        .read<AppProvider>()
-        .isInWishlist(widget.book.id);
+    final isInWishlist =
+        await context.read<AppProvider>().isInWishlist(widget.book.id);
     if (mounted) {
       setState(() => _isInWishlist = isInWishlist);
     }
@@ -51,14 +49,16 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
   }
 
   Future<void> _addToCart() async {
-    await context.read<AppProvider>().addToCart(widget.book);
+    await context.read<AppProvider>().addToCart(widget.book, 1);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Added to cart'),
+      SnackBar(
+        content: const Text('Added to cart'),
         action: SnackBarAction(
           label: 'View Cart',
-          onPressed: null, // Will be handled by the cart screen
+          onPressed: () {
+            Navigator.pushNamed(context, '/cart');
+          },
         ),
       ),
     );
@@ -72,21 +72,14 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
       return;
     }
 
-    final user = context.read<AppProvider>().currentUser;
+    final user = context.read<AppProvider>().user;
     if (user == null) return;
 
-    final review = Review(
-      id: '',
-      bookId: widget.book.id,
-      userId: user.uid,
-      userName: user.displayName ?? 'Anonymous',
-      userImage: user.photoURL ?? '',
-      comment: _reviewController.text.trim(),
-      rating: _rating,
-      createdAt: DateTime.now(),
-    );
-
-    await context.read<AppProvider>().addReview(review);
+    await context.read<AppProvider>().addReview(
+          widget.book.id,
+          _reviewController.text.trim(),
+          _rating,
+        );
     _reviewController.clear();
     setState(() => _rating = 0);
   }
@@ -200,7 +193,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  StreamBuilder<List<Review>>(
+                  StreamBuilder<List<Map<String, dynamic>>>(
                     stream: context
                         .read<AppProvider>()
                         .getBookReviews(widget.book.id),
@@ -213,7 +206,14 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
 
                       return Column(
                         children: [
-                          ...reviews.map((review) => _ReviewCard(review: review)),
+                          ...reviews.map((review) => _ReviewCard(
+                                review: review,
+                                onLike: () =>
+                                    context.read<AppProvider>().likeReview(
+                                          widget.book.id,
+                                          review['id'],
+                                        ),
+                              )),
                           const SizedBox(height: 16),
                           const Text(
                             'Write a Review',
@@ -261,9 +261,9 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: SafeArea(
+      bottomNavigationBar: BottomAppBar(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(8.0),
           child: ElevatedButton(
             onPressed: _addToCart,
             child: const Text('Add to Cart'),
@@ -275,27 +275,31 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
 }
 
 class _ReviewCard extends StatelessWidget {
-  final Review review;
+  final Map<String, dynamic> review;
+  final VoidCallback onLike;
 
-  const _ReviewCard({required this.review});
+  const _ReviewCard({
+    required this.review,
+    required this.onLike,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(8.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 CircleAvatar(
-                  backgroundImage: review.userImage.isNotEmpty
-                      ? NetworkImage(review.userImage)
+                  backgroundImage: review['userImage'] != null
+                      ? NetworkImage(review['userImage'])
                       : null,
-                  child: review.userImage.isEmpty
-                      ? Text(review.userName[0].toUpperCase())
+                  child: review['userImage'] == null
+                      ? Text(review['userName'][0].toUpperCase())
                       : null,
                 ),
                 const SizedBox(width: 8),
@@ -304,52 +308,47 @@ class _ReviewCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        review.userName,
+                        review['userName'],
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text(
-                        review.createdAt.toString(),
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                        ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.star,
+                            size: 16,
+                            color: Colors.amber,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            review['rating'].toString(),
+                            style: const TextStyle(
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                Row(
-                  children: [
-                    const Icon(Icons.star, color: Colors.amber, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      review.rating.toStringAsFixed(1),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(review.comment),
-            const SizedBox(height: 8),
-            Row(
-              children: [
                 IconButton(
-                  icon: const Icon(Icons.thumb_up_outlined),
-                  onPressed: () {
-                    context.read<AppProvider>().likeReview(review.id);
-                  },
+                  icon: Icon(
+                    Icons.thumb_up,
+                    color: review['likedBy']?.contains(review['userId'])
+                        ? Colors.blue
+                        : null,
+                  ),
+                  onPressed: onLike,
                 ),
-                Text('${review.likes}'),
+                Text(review['likes'].toString()),
               ],
             ),
+            const SizedBox(height: 8),
+            Text(review['text']),
           ],
         ),
       ),
     );
   }
-} 
+}

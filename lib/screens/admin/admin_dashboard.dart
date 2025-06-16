@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
-import '../../models/book.dart';
 import 'book_management_screen.dart';
 import 'category_management_screen.dart';
 import 'order_management_screen.dart';

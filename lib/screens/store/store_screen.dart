@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../models/book.dart';
-import 'book_details_screen.dart';
 import 'search_screen.dart';
+import 'book_details_screen.dart';
 
 /// A screen that displays a list of books with filtering and pagination options.
 class StoreScreen extends StatefulWidget {
@@ -16,11 +16,14 @@ class StoreScreen extends StatefulWidget {
 /// The state for the StoreScreen.
 class _StoreScreenState extends State<StoreScreen> {
   /// The currently selected category for filtering books.
-  String? _selectedCategory;
+  String _selectedCategory = 'All';
+
   /// The currently selected sort option for ordering books.
   String _selectedSort = 'Newest';
+
   /// The number of books to display per page.
   final int _pageSize = 10;
+
   /// The current page number for pagination.
   int _currentPage = 1;
 
@@ -56,21 +59,28 @@ class _StoreScreenState extends State<StoreScreen> {
         body: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+              padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _selectedCategory ?? 'All',
-                      decoration: const InputDecoration(labelText: 'Category'),
-                      items: categories
-                          .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
-                          .toList(),
-                      onChanged: (val) {
-                        setState(() {
-                          _selectedCategory = val == 'All' ? null : val;
-                          _currentPage = 1;
-                        });
+                      value: _selectedCategory,
+                      decoration: const InputDecoration(
+                        labelText: 'Category',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: categories.map((category) {
+                        return DropdownMenuItem(
+                          value: category,
+                          child: Text(category),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _selectedCategory = value;
+                          });
+                        }
                       },
                     ),
                   ),
@@ -78,18 +88,32 @@ class _StoreScreenState extends State<StoreScreen> {
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       value: _selectedSort,
-                      decoration: const InputDecoration(labelText: 'Sort by'),
+                      decoration: const InputDecoration(
+                        labelText: 'Sort By',
+                        border: OutlineInputBorder(),
+                      ),
                       items: const [
-                        DropdownMenuItem(value: 'Newest', child: Text('Newest')),
-                        DropdownMenuItem(value: 'Price: Low to High', child: Text('Price: Low to High')),
-                        DropdownMenuItem(value: 'Price: High to Low', child: Text('Price: High to Low')),
-                        DropdownMenuItem(value: 'Rating', child: Text('Rating')),
+                        DropdownMenuItem(
+                            value: 'Newest', child: Text('Newest')),
+                        DropdownMenuItem(
+                          value: 'Price: Low to High',
+                          child: Text('Price: Low to High'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Price: High to Low',
+                          child: Text('Price: High to Low'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Rating',
+                          child: Text('Rating'),
+                        ),
                       ],
-                      onChanged: (val) {
-                        setState(() {
-                          _selectedSort = val!;
-                          _currentPage = 1;
-                        });
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _selectedSort = value;
+                          });
+                        }
                       },
                     ),
                   ),
@@ -99,198 +123,176 @@ class _StoreScreenState extends State<StoreScreen> {
             Expanded(
               child: TabBarView(
                 children: [
-                  _BookGrid(
+                  StreamBuilder<List<Book>>(
                     stream: provider.getBooksFiltered(
-                      category: _selectedCategory,
-                      sort: _selectedSort,
-                      pageSize: _pageSize * _currentPage,
+                      category:
+                          _selectedCategory == 'All' ? null : _selectedCategory,
                     ),
-                    onLoadMore: () {
-                      setState(() => _currentPage++);
-                    },
-                    canLoadMore: true, // TODO: Set to false if no more data
-                  ),
-                  _BookGrid(
-                    stream: provider.getBestsellersFiltered(
-                      category: _selectedCategory,
-                      sort: _selectedSort,
-                      pageSize: _pageSize * _currentPage,
-                    ),
-                    onLoadMore: () {
-                      setState(() => _currentPage++);
-                    },
-                    canLoadMore: true,
-                  ),
-                  _BookGrid(
-                    stream: provider.getNewArrivalsFiltered(
-                      category: _selectedCategory,
-                      sort: _selectedSort,
-                      pageSize: _pageSize * _currentPage,
-                    ),
-                    onLoadMore: () {
-                      setState(() => _currentPage++);
-                    },
-                    canLoadMore: true,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-/// A widget that displays a grid of books with pagination.
-class _BookGrid extends StatelessWidget {
-  /// The stream of books to display.
-  final Stream<List<Book>> stream;
-  /// Callback function to load more books.
-  final VoidCallback onLoadMore;
-  /// Whether more books can be loaded.
-  final bool canLoadMore;
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Text('Error: ${snapshot.error}'),
+                        );
+                      }
 
-  const _BookGrid({required this.stream, required this.onLoadMore, required this.canLoadMore});
+                      final books = snapshot.data ?? [];
 
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<List<Book>>(
-      stream: stream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+                      if (books.isEmpty) {
+                        return const Center(
+                          child: Text('No books found'),
+                        );
+                      }
 
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: \\${snapshot.error}'));
-        }
-
-        final books = snapshot.data ?? [];
-
-        if (books.isEmpty) {
-          return const Center(child: Text('No books found'));
-        }
-
-        return Column(
-          children: [
-            Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.all(8),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.7,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                ),
-                itemCount: books.length,
-                itemBuilder: (context, index) {
-                  final book = books[index];
-                  return _BookCard(book: book);
-                },
-              ),
-            ),
-            if (canLoadMore)
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: ElevatedButton(
-                  onPressed: onLoadMore,
-                  child: const Text('Load More'),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-/// A widget that displays a book card.
-class _BookCard extends StatelessWidget {
-  /// The book to display.
-  final Book book;
-
-  const _BookCard({required this.book});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => BookDetailsScreen(book: book),
-            ),
-          );
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Image.network(
-                book.coverImage,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Center(
-                    child: Icon(Icons.error),
-                  );
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    book.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    book.author,
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 14,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '\$${book.price.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.star,
-                            color: Colors.amber,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            book.rating.toStringAsFixed(1),
-                            style: const TextStyle(
-                              fontSize: 14,
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: books.length,
+                        itemBuilder: (context, index) {
+                          final book = books[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: ListTile(
+                              leading: Image.network(
+                                book.coverImage,
+                                width: 60,
+                                height: 90,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.error);
+                                },
+                              ),
+                              title: Text(book.title),
+                              subtitle:
+                                  Text('\$${book.price.toStringAsFixed(2)}'),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        BookDetailsScreen(book: book),
+                                  ),
+                                );
+                              },
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  StreamBuilder<List<Book>>(
+                    stream: provider.getBestsellers(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Text('Error: ${snapshot.error}'),
+                        );
+                      }
+
+                      final books = snapshot.data ?? [];
+
+                      if (books.isEmpty) {
+                        return const Center(
+                          child: Text('No bestsellers found'),
+                        );
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: books.length,
+                        itemBuilder: (context, index) {
+                          final book = books[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: ListTile(
+                              leading: Image.network(
+                                book.coverImage,
+                                width: 60,
+                                height: 90,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.error);
+                                },
+                              ),
+                              title: Text(book.title),
+                              subtitle:
+                                  Text('\$${book.price.toStringAsFixed(2)}'),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        BookDetailsScreen(book: book),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  StreamBuilder<List<Book>>(
+                    stream: provider.getNewArrivals(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Text('Error: ${snapshot.error}'),
+                        );
+                      }
+
+                      final books = snapshot.data ?? [];
+
+                      if (books.isEmpty) {
+                        return const Center(
+                          child: Text('No new arrivals found'),
+                        );
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: books.length,
+                        itemBuilder: (context, index) {
+                          final book = books[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: ListTile(
+                              leading: Image.network(
+                                book.coverImage,
+                                width: 60,
+                                height: 90,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.error);
+                                },
+                              ),
+                              title: Text(book.title),
+                              subtitle:
+                                  Text('\$${book.price.toStringAsFixed(2)}'),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        BookDetailsScreen(book: book),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ],
               ),
@@ -300,4 +302,4 @@ class _BookCard extends StatelessWidget {
       ),
     );
   }
-} 
+}

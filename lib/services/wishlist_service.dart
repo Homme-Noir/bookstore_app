@@ -57,4 +57,23 @@ class WishlistService {
         .get();
     return doc.exists;
   }
+
+  // Get user's wishlist as a Future
+  Future<List<Book>> getWishlist(String userId) async {
+    final snapshot = await _firestore
+        .collection(_collection)
+        .doc(userId)
+        .collection('items')
+        .get();
+
+    final bookIds = snapshot.docs.map((doc) => doc.id).toList();
+    if (bookIds.isEmpty) return [];
+
+    final booksSnapshot = await _firestore
+        .collection('books')
+        .where(FieldPath.documentId, whereIn: bookIds)
+        .get();
+
+    return booksSnapshot.docs.map((doc) => Book.fromFirestore(doc)).toList();
+  }
 } 

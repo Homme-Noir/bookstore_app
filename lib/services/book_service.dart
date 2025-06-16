@@ -24,8 +24,46 @@ class BookService {
     return snapshot.docs.map(Book.fromFirestore).toList();
   }
 
+  /// Fetches featured books.
+  Future<List<Book>> getFeaturedBooks() async {
+    final snapshot = await _firestore
+        .collection(_collection)
+        .where('isFeatured', isEqualTo: true)
+        .get();
+    return snapshot.docs.map(Book.fromFirestore).toList();
+  }
+
+  /// Fetches new releases.
+  Future<List<Book>> getNewReleases() async {
+    final snapshot = await _firestore
+        .collection(_collection)
+        .where('isNewArrival', isEqualTo: true)
+        .orderBy('releaseDate', descending: true)
+        .get();
+    return snapshot.docs.map(Book.fromFirestore).toList();
+  }
+
+  /// Fetches bestsellers.
+  Future<List<Book>> getBestsellers() async {
+    final snapshot = await _firestore
+        .collection(_collection)
+        .where('isBestseller', isEqualTo: true)
+        .orderBy('rating', descending: true)
+        .get();
+    return snapshot.docs.map(Book.fromFirestore).toList();
+  }
+
+  /// Fetches books by category.
+  Future<List<Book>> getBooksByCategory(String category) async {
+    final snapshot = await _firestore
+        .collection(_collection)
+        .where('genres', arrayContains: category)
+        .get();
+    return snapshot.docs.map(Book.fromFirestore).toList();
+  }
+
   /// Stream of bestseller books sorted by rating.
-  Stream<List<Book>> getBestsellers() {
+  Stream<List<Book>> getBestsellersStream() {
     return _firestore
         .collection(_collection)
         .where('isBestseller', isEqualTo: true)
@@ -35,7 +73,7 @@ class BookService {
   }
 
   /// Stream of new arrivals sorted by release date.
-  Stream<List<Book>> getNewArrivals() {
+  Stream<List<Book>> getNewArrivalsStream() {
     return _firestore
         .collection(_collection)
         .where('isNewArrival', isEqualTo: true)
@@ -190,6 +228,41 @@ class BookService {
     } catch (e) {
       print('Error deleting book: $e');
       rethrow;
+    }
+  }
+
+  /// Adds a new category.
+  Future<void> addCategory(String category) async {
+    await _firestore.collection('categories').add({
+      'name': category,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Updates an existing category.
+  Future<void> updateCategory(String oldCategory, String newCategory) async {
+    final snapshot = await _firestore
+        .collection('categories')
+        .where('name', isEqualTo: oldCategory)
+        .get();
+
+    if (snapshot.docs.isNotEmpty) {
+      await snapshot.docs.first.reference.update({
+        'name': newCategory,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
+  /// Deletes a category.
+  Future<void> deleteCategory(String category) async {
+    final snapshot = await _firestore
+        .collection('categories')
+        .where('name', isEqualTo: category)
+        .get();
+
+    if (snapshot.docs.isNotEmpty) {
+      await snapshot.docs.first.reference.delete();
     }
   }
 

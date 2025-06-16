@@ -60,8 +60,12 @@ class Book {
       isbn: data['isbn'] as String?,
       pageCount: data['pageCount'] as int?,
       status: data['status'] as String?,
-      authors: data['authors'] != null ? List<String>.from(data['authors']) : null,
-      categories: data['categories'] != null ? List<String>.from(data['categories']) : null,
+      authors:
+          data['authors'] != null ? List<String>.from(data['authors']) : null,
+      categories:
+          data['categories'] != null
+              ? List<String>.from(data['categories'])
+              : null,
     );
   }
 
@@ -71,22 +75,30 @@ class Book {
       title: json['title'] as String,
       author: json['author'] as String? ?? '',
       description: json['description'] as String? ?? '',
-      coverImage: json['coverImage'] as String? ?? json['thumbnailUrl'] as String? ?? '',
+      coverImage:
+          json['coverImage'] as String? ??
+          json['thumbnailUrl'] as String? ??
+          '',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       genres: json['genres'] != null ? List<String>.from(json['genres']) : [],
       stock: json['stock'] as int? ?? 0,
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       reviewCount: json['reviewCount'] as int? ?? 0,
-      releaseDate: json['releaseDate'] != null
-          ? (json['releaseDate'] as Timestamp).toDate()
-          : DateTime.now(),
+      releaseDate:
+          json['releaseDate'] != null
+              ? (json['releaseDate'] as Timestamp).toDate()
+              : DateTime.now(),
       isBestseller: json['isBestseller'] as bool? ?? false,
       isNewArrival: json['isNewArrival'] as bool? ?? false,
       isbn: json['isbn'] as String?,
       pageCount: json['pageCount'] as int?,
       status: json['status'] as String?,
-      authors: json['authors'] != null ? List<String>.from(json['authors']) : null,
-      categories: json['categories'] != null ? List<String>.from(json['categories']) : null,
+      authors:
+          json['authors'] != null ? List<String>.from(json['authors']) : null,
+      categories:
+          json['categories'] != null
+              ? List<String>.from(json['categories'])
+              : null,
     );
   }
 
@@ -143,7 +155,9 @@ class BookModel {
       title: json['title'] as String,
       isbn: json['isbn'] as String,
       pageCount: json['pageCount'] as int,
-      publishedDate: PublishedDate.fromJson(json['publishedDate'] as Map<String, dynamic>),
+      publishedDate: PublishedDate.fromJson(
+        json['publishedDate'] as Map<String, dynamic>,
+      ),
       thumbnailUrl: json['thumbnailUrl'] as String,
       longDescription: json['longDescription'] as String,
       status: json['status'] as String,

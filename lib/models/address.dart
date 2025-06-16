@@ -32,6 +32,19 @@ class ShippingAddress {
     );
   }
 
+  factory ShippingAddress.fromJson(Map<String, dynamic> json) {
+    return ShippingAddress(
+      name: json['name'] as String,
+      phoneNumber: json['phoneNumber'] as String,
+      flatNumber: json['flatNumber'] as String,
+      area: json['area'] as String,
+      landmark: json['landmark'] as String,
+      city: json['city'] as String,
+      state: json['state'] as String,
+      pincode: json['pincode'] as String,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'name': name,
@@ -43,6 +56,10 @@ class ShippingAddress {
       'state': state,
       'pincode': pincode,
     };
+  }
+
+  Map<String, dynamic> toJson() {
+    return toMap();
   }
 
   ShippingAddress copyWith({
@@ -91,4 +108,12 @@ class ShippingAddress {
       city.hashCode ^
       state.hashCode ^
       pincode.hashCode;
+
+  @override
+  String toString() {
+    return '''$name
+$flatNumber, $area, $landmark
+$city, $state, $pincode
+Phone: $phoneNumber''';
+  }
 }

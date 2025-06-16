@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
-import '../../services/auth_service.dart';
 
 /// A screen that displays the user's profile information and allows for profile updates.
 class ProfileScreen extends StatelessWidget {

@@ -1,32 +1,39 @@
 import 'package:flutter/material.dart';
-import '../services/book_service.dart';
 import '../models/book.dart';
+import '../services/book_service.dart';
 
 class BookProvider with ChangeNotifier {
-  final BookService _bookService = BookService();
+  final BookService _bookService;
   List<Book> _books = [];
-  List<Book> _searchResults = [];
-  Book? _selectedBook;
+  List<Book> _featuredBooks = [];
+  List<Book> _newReleases = [];
+  List<Book> _bestsellers = [];
   bool _isLoading = false;
   String? _error;
 
+  BookProvider({
+    required BookService bookService,
+  }) : _bookService = bookService {
+    loadBooks();
+  }
+
   List<Book> get books => _books;
-  List<Book> get searchResults => _searchResults;
-  Book? get selectedBook => _selectedBook;
+  List<Book> get featuredBooks => _featuredBooks;
+  List<Book> get newReleases => _newReleases;
+  List<Book> get bestsellers => _bestsellers;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  BookProvider() {
-    _loadBooks();
-  }
-
-  Future<void> _loadBooks() async {
+  Future<void> loadBooks() async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
       _books = await _bookService.getBooks();
+      _featuredBooks = await _bookService.getFeaturedBooks();
+      _newReleases = await _bookService.getNewReleases();
+      _bestsellers = await _bookService.getBestsellers();
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -41,7 +48,7 @@ class BookProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      _searchResults = await _bookService.searchBooks(query);
+      _books = await _bookService.searchBooks(query);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -50,61 +57,13 @@ class BookProvider with ChangeNotifier {
     }
   }
 
-  Future<void> selectBook(String bookId) async {
+  Future<void> filterBooksByCategory(String category) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      _selectedBook = await _bookService.getBook(bookId);
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> addBook(Book book) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      await _bookService.addBook(book);
-      await _loadBooks();
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> updateBook(Book book) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      await _bookService.updateBook(book);
-      await _loadBooks();
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> deleteBook(String bookId) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      await _bookService.deleteBook(bookId);
-      await _loadBooks();
+      _books = await _bookService.getBooksByCategory(category);
     } catch (e) {
       _error = e.toString();
     } finally {

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
-import 'home_screen.dart';
+import '../providers/auth_provider.dart';
+import 'home/home_screen.dart';
 import 'auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -22,35 +23,24 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
-    final user = context.read<AppProvider>().currentUser;
-    if (user != null) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
-    } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
-    }
+    final authProvider = context.read<AuthProvider>();
+    final isAuthenticated = authProvider.isAuthenticated;
+
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) =>
+            isAuthenticated ? const HomeScreen() : const LoginScreen(),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              'images/logo.png',
-              width: 150,
-              height: 150,
-            ),
-            const SizedBox(height: 20),
-            const CircularProgressIndicator(),
-          ],
-        ),
+        child: CircularProgressIndicator(),
       ),
     );
   }
-} 
+}

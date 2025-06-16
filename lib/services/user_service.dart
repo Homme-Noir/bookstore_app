@@ -57,7 +57,7 @@ class UserService {
   final String _collection = 'users';
 
   // Get current user profile
-  Stream<UserProfile?> getCurrentUserProfile() {
+  Stream<UserData?> getCurrentUserProfile() {
     final user = _auth.currentUser;
     if (user == null) return Stream.value(null);
 
@@ -65,17 +65,44 @@ class UserService {
         .collection(_collection)
         .doc(user.uid)
         .snapshots()
-        .map((doc) => doc.exists ? UserProfile.fromFirestore(doc) : null);
+        .map((doc) => doc.exists ? UserData.fromMap(doc.data()!) : null);
   }
 
-  // Create or update user profile
-  Future<void> updateUserProfile(UserProfile profile) {
-    return _firestore.collection(_collection).doc(profile.id).set(
-          profile.toMap(),
-          SetOptions(merge: true),
-        );
+  // Create user profile
+  Future<void> createUserProfile({
+    required String userId,
+    required String name,
+    required String email,
+    String? photoUrl,
+  }) async {
+    final userData = UserData(
+      id: userId,
+      name: name,
+      email: email,
+      photoUrl: photoUrl,
+    );
+    await createUserData(userData);
   }
-  
+
+  // Update user profile
+  Future<void> updateUserProfile({
+    required String userId,
+    String? name,
+    String? email,
+    String? photoUrl,
+    String? address,
+  }) async {
+    final updates = <String, dynamic>{};
+    if (name != null) updates['name'] = name;
+    if (email != null) updates['email'] = email;
+    if (photoUrl != null) updates['photoUrl'] = photoUrl;
+    if (address != null) {
+      updates['addresses'] = FieldValue.arrayUnion([address]);
+    }
+
+    await _firestore.collection(_collection).doc(userId).update(updates);
+  }
+
   // Remove shipping address
   Future<void> removeShippingAddress(String userId, String address) {
     return _firestore.collection(_collection).doc(userId).update({
@@ -99,10 +126,9 @@ class UserService {
 
   // Update profile photo
   Future<void> updateProfilePhoto(String userId, String photoUrl) {
-    return _firestore
-        .collection(_collection)
-        .doc(userId)
-        .update({'photoUrl': photoUrl});
+    return _firestore.collection(_collection).doc(userId).update({
+      'photoUrl': photoUrl,
+    });
   }
 
   // Check if user is admin
@@ -118,10 +144,7 @@ class UserService {
   }
 
   Future<void> createUserData(UserData userData) async {
-    await _firestore
-        .collection('users')
-        .doc(userData.id)
-        .set(userData.toMap());
+    await _firestore.collection('users').doc(userData.id).set(userData.toMap());
   }
 
   Future<void> updateUserData(UserData userData) async {
@@ -132,7 +155,9 @@ class UserService {
   }
 
   Future<void> addShippingAddress(
-      String userId, ShippingAddress address) async {
+    String userId,
+    ShippingAddress address,
+  ) async {
     await _firestore
         .collection('users')
         .doc(userId)
@@ -141,7 +166,10 @@ class UserService {
   }
 
   Future<void> updateShippingAddress(
-      String userId, String addressId, ShippingAddress address) async {
+    String userId,
+    String addressId,
+    ShippingAddress address,
+  ) async {
     await _firestore
         .collection('users')
         .doc(userId)
@@ -165,8 +193,11 @@ class UserService {
         .doc(userId)
         .collection('addresses')
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ShippingAddress.fromMap(doc.data()))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => ShippingAddress.fromMap(doc.data()))
+                  .toList(),
+        );
   }
-} 
+}

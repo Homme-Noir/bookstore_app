@@ -1,33 +1,30 @@
 import 'package:flutter/material.dart';
-import 'login.dart';
-import 'register.dart';
-import 'package:ecommerce/Config/config.dart';
-
+import 'login_screen.dart';
+import 'register_screen.dart';
 
 class AuthenticScreen extends StatefulWidget {
   const AuthenticScreen({super.key});
 
   @override
-  _AuthenticScreenState createState() => _AuthenticScreenState();
+  State<AuthenticScreen> createState() => _AuthenticScreenState();
 }
 
 class _AuthenticScreenState extends State<AuthenticScreen> {
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-
   }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: Color.fromRGBO(237, 237, 237, 1.0),
+        backgroundColor: const Color.fromRGBO(237, 237, 237, 1.0),
         appBar: AppBar(
           backgroundColor: Colors.deepPurple,
-          title: Text(EcommerceApp.appName),
-          bottom: TabBar(
+          title: const Text('Book Store'),
+          bottom: const TabBar(
             tabs: [
               Tab(
                 icon: Icon(Icons.lock),
@@ -43,10 +40,9 @@ class _AuthenticScreenState extends State<AuthenticScreen> {
           ),
         ),
         body: TabBarView(
-          children: <Widget>[
-            ///RegisterPage(),
-            Login(),
-            Register(),
+          children: [
+            LoginScreen(),
+            RegisterScreen(),
           ],
         ),
       ),

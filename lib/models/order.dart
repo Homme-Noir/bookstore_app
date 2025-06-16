@@ -1,5 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'address.dart';
+import 'book.dart';
+
+// Add OrderStatus enum
+enum OrderStatus { pending, processing, shipped, delivered, cancelled }
 
 class OrderItem {
   final String bookId;
@@ -7,6 +11,7 @@ class OrderItem {
   final double price;
   final int quantity;
   final String coverImage;
+  final Book? book;
 
   const OrderItem({
     required this.bookId,
@@ -14,6 +19,7 @@ class OrderItem {
     required this.price,
     required this.quantity,
     required this.coverImage,
+    this.book,
   });
 
   factory OrderItem.fromMap(Map<String, dynamic> map) {
@@ -23,6 +29,7 @@ class OrderItem {
       price: (map['price'] as num).toDouble(),
       quantity: map['quantity'] as int,
       coverImage: map['coverImage'] as String,
+      book: map['book'] != null ? Book.fromJson(map['book']) : null,
     );
   }
 
@@ -33,6 +40,7 @@ class OrderItem {
       'price': price,
       'quantity': quantity,
       'coverImage': coverImage,
+      if (book != null) 'book': book!.toMap(),
     };
   }
 }
@@ -43,11 +51,14 @@ class Order {
   final List<OrderItem> items;
   final double totalAmount;
   final ShippingAddress shippingAddress;
-  final String status;
+  final OrderStatus status;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final String? paymentId;
   final String? trackingNumber;
+  final String? paymentMethod;
+  final double? shippingCost;
+  final double? tax;
 
   const Order({
     required this.id,
@@ -60,6 +71,9 @@ class Order {
     this.updatedAt,
     this.paymentId,
     this.trackingNumber,
+    this.paymentMethod,
+    this.shippingCost,
+    this.tax,
   });
 
   Order copyWith({
@@ -68,11 +82,14 @@ class Order {
     List<OrderItem>? items,
     double? totalAmount,
     ShippingAddress? shippingAddress,
-    String? status,
+    OrderStatus? status,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? paymentId,
     String? trackingNumber,
+    String? paymentMethod,
+    double? shippingCost,
+    double? tax,
   }) {
     return Order(
       id: id ?? this.id,
@@ -85,6 +102,9 @@ class Order {
       updatedAt: updatedAt ?? this.updatedAt,
       paymentId: paymentId ?? this.paymentId,
       trackingNumber: trackingNumber ?? this.trackingNumber,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      shippingCost: shippingCost ?? this.shippingCost,
+      tax: tax ?? this.tax,
     );
   }
 
@@ -93,22 +113,26 @@ class Order {
     return Order(
       id: doc.id,
       userId: data['userId'] as String,
-      items:
-          (data['items'] as List)
-              .map((item) => OrderItem.fromMap(item as Map<String, dynamic>))
-              .toList(),
+      items: (data['items'] as List)
+          .map((item) => OrderItem.fromMap(item as Map<String, dynamic>))
+          .toList(),
       totalAmount: (data['totalAmount'] as num).toDouble(),
       shippingAddress: ShippingAddress.fromJson(
         data['shippingAddress'] as Map<String, dynamic>,
       ),
-      status: data['status'] as String,
+      status: OrderStatus.values.firstWhere(
+        (e) => e.toString().split('.').last == data['status'],
+        orElse: () => OrderStatus.pending,
+      ),
       createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt:
-          data['updatedAt'] != null
-              ? (data['updatedAt'] as Timestamp).toDate()
-              : null,
+      updatedAt: data['updatedAt'] != null
+          ? (data['updatedAt'] as Timestamp).toDate()
+          : null,
       paymentId: data['paymentId'] as String?,
       trackingNumber: data['trackingNumber'] as String?,
+      paymentMethod: data['paymentMethod'] as String?,
+      shippingCost: (data['shippingCost'] as num?)?.toDouble(),
+      tax: (data['tax'] as num?)?.toDouble(),
     );
   }
 
@@ -118,11 +142,18 @@ class Order {
       'items': items.map((item) => item.toMap()).toList(),
       'totalAmount': totalAmount,
       'shippingAddress': shippingAddress.toJson(),
-      'status': status,
+      'status': status.toString().split('.').last,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
       'paymentId': paymentId,
       'trackingNumber': trackingNumber,
+      'paymentMethod': paymentMethod,
+      'shippingCost': shippingCost,
+      'tax': tax,
     };
   }
+
+  // Computed getters for UI compatibility
+  double get subtotal => totalAmount - (shippingCost ?? 0) - (tax ?? 0);
+  double get total => totalAmount;
 }

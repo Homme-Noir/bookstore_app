@@ -42,12 +42,12 @@ class OrderDetailsScreen extends StatelessWidget {
             const SizedBox(height: 16),
             _InfoCard(
               title: 'Shipping Address',
-              content: order.shippingAddress,
+              content: order.shippingAddress.toString(),
             ),
             const SizedBox(height: 16),
             _InfoCard(
               title: 'Payment Method',
-              content: order.paymentMethod,
+              content: order.paymentMethod ?? 'Not specified',
             ),
             const SizedBox(height: 24),
             const Text(
@@ -70,8 +70,8 @@ class OrderDetailsScreen extends StatelessWidget {
             const SizedBox(height: 24),
             _OrderSummaryCard(
               subtotal: order.subtotal,
-              shipping: order.shippingCost,
-              tax: order.tax,
+              shipping: order.shippingCost ?? 0.0,
+              tax: order.tax ?? 0.0,
               total: order.total,
             ),
           ],
@@ -188,67 +188,29 @@ class _OrderItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => BookDetailsScreen(book: item.book),
-            ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  item.book.coverImage,
-                  width: 60,
-                  height: 90,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 60,
-                      height: 90,
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.error),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.book.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Quantity: ${item.quantity}',
-                      style: const TextStyle(
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                '\$${(item.book.price * item.quantity).toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
+      child: ListTile(
+        leading: Image.network(
+          item.coverImage,
+          width: 50,
+          height: 75,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(Icons.book);
+          },
         ),
+        title: Text(item.title),
+        subtitle: Text('Quantity: ${item.quantity}'),
+        trailing: Text('\$${(item.price * item.quantity).toStringAsFixed(2)}'),
+        onTap: () {
+          if (item.book != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BookDetailsScreen(book: item.book!),
+              ),
+            );
+          }
+        },
       ),
     );
   }
@@ -258,6 +220,7 @@ class _OrderItemCard extends StatelessWidget {
 class _InfoCard extends StatelessWidget {
   /// The title of the information card.
   final String title;
+
   /// The content of the information card.
   final String content;
 
@@ -373,11 +336,10 @@ class _SummaryRow extends StatelessWidget {
             style: TextStyle(
               fontSize: isTotal ? 18 : 16,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: isTotal ? Colors.green : null,
             ),
           ),
         ],
       ),
     );
   }
-} 
+}

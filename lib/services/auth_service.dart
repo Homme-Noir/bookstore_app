@@ -53,18 +53,14 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
 
-      final userCredential =
-          await _auth.signInWithCredential(credential);
+      final userCredential = await _auth.signInWithCredential(credential);
 
       // Create or update user profile
       if (userCredential.user != null) {
         await _userService.updateUserProfile(
-          UserProfile(
-            id: userCredential.user!.uid,
-            email: userCredential.user!.email!,
-            name: userCredential.user!.displayName ?? '',
-            photoUrl: userCredential.user!.photoURL,
-          ),
+          userId: userCredential.user!.uid,
+          name: userCredential.user!.displayName ?? '',
+          email: userCredential.user!.email!,
         );
       }
 
@@ -125,4 +121,4 @@ class AuthService {
         return Exception(e.message ?? 'An error occurred.');
     }
   }
-} 
+}

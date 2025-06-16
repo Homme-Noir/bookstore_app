@@ -26,7 +26,7 @@ class BookManagementScreen extends StatelessWidget {
         ],
       ),
       body: StreamBuilder<List<Book>>(
-        stream: context.read<AppProvider>().getAllBooks(),
+        stream: context.read<AppProvider>().getAllBooksStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -215,4 +215,4 @@ class _BookCard extends StatelessWidget {
       ),
     );
   }
-} 
+}

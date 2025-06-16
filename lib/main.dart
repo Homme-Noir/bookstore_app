@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
+import 'dart:io' show Platform;
 import 'providers/app_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/book_provider.dart';
@@ -21,10 +23,26 @@ import 'screens/profile/settings_screen.dart';
 import 'screens/orders/order_history_screen.dart';
 import 'screens/orders/order_details_screen.dart';
 import 'screens/payment/payment_screen.dart';
+import 'services/auth_service.dart';
+import 'services/book_service.dart';
+import 'services/cart_service.dart';
+import 'services/order_service.dart';
+import 'services/user_service.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('Firebase initialized successfully');
+  } catch (e) {
+    print('Error initializing Firebase: $e');
+    // Continue running the app even if Firebase fails to initialize
+  }
+
   runApp(const MyApp());
 }
 
@@ -33,15 +51,46 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final firestoreInstance = firestore.FirebaseFirestore.instance;
+    final authService = AuthService();
+    final userService = UserService();
+    final cartService = CartService();
+    final bookService = BookService();
+    final orderService = OrderService();
+
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AppProvider()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => BookProvider()),
-        ChangeNotifierProvider(create: (_) => CartProvider()),
-        ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(
+          create:
+              (_) => AppProvider(
+                authService: authService,
+                bookService: bookService,
+                cartService: cartService,
+                orderService: orderService,
+                userService: userService,
+                firestore: firestoreInstance,
+              ),
+        ),
+        ChangeNotifierProvider(
+          create:
+              (_) => AuthProvider(
+                authService: authService,
+                userService: userService,
+              ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => BookProvider(bookService: bookService),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => CartProvider(cartService: cartService),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => OrderProvider(orderService: orderService),
+        ),
         ChangeNotifierProvider(create: (_) => WishlistProvider()),
-        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(
+          create: (_) => UserProvider(userService: userService),
+        ),
       ],
       child: MaterialApp(
         title: 'Book Store',

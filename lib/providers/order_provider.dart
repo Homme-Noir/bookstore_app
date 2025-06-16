@@ -1,25 +1,55 @@
 import 'package:flutter/material.dart';
-import '../services/order_service.dart';
 import '../models/order.dart';
+import '../services/order_service.dart';
 import '../models/address.dart';
 
 class OrderProvider with ChangeNotifier {
-  final OrderService _orderService = OrderService();
+  final OrderService _orderService;
   List<Order> _orders = [];
   Order? _selectedOrder;
   bool _isLoading = false;
   String? _error;
+
+  OrderProvider({
+    required OrderService orderService,
+  }) : _orderService = orderService {
+    loadOrders();
+  }
 
   List<Order> get orders => _orders;
   Order? get selectedOrder => _selectedOrder;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  void init(String userId) {
-    _orderService.getUserOrders(userId).listen((orders) {
-      _orders = orders;
+  Future<void> loadOrders() async {
+    try {
+      _isLoading = true;
+      _error = null;
       notifyListeners();
-    });
+
+      _orders = await _orderService.getOrders();
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> placeOrder(Order order) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      await _orderService.placeOrder(order);
+      await loadOrders();
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> createOrder({
@@ -63,16 +93,16 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateOrderStatus(String orderId, String status) async {
+  Future<void> updateOrderStatus(String orderId, OrderStatus status) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
       await _orderService.updateOrderStatus(orderId, status);
+      await loadOrders();
     } catch (e) {
       _error = e.toString();
-      notifyListeners();
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -83,4 +113,4 @@ class OrderProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
   }
-} 
+}
