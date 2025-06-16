@@ -1,26 +1,31 @@
-import 'package:device_preview/device_preview.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'firebase_options.dart';
-import 'dart:async';
-import 'authentication/authenticatepage.dart';
-import 'homepage.dart';
+import 'package:provider/provider.dart';
+import 'providers/app_provider.dart';
+import 'providers/auth_provider.dart';
+import 'providers/book_provider.dart';
+import 'providers/cart_provider.dart';
+import 'providers/order_provider.dart';
+import 'providers/wishlist_provider.dart';
+import 'providers/user_provider.dart';
+import 'models/order.dart';
+import 'screens/splash_screen.dart';
+import 'screens/admin/admin_dashboard.dart';
+import 'screens/admin/book_management_screen.dart';
+import 'screens/admin/book_edit_screen.dart';
+import 'screens/admin/category_management_screen.dart';
+import 'screens/admin/order_management_screen.dart';
+import 'screens/wishlist/wishlist_screen.dart';
+import 'screens/profile/profile_screen.dart';
+import 'screens/profile/settings_screen.dart';
+import 'screens/orders/order_history_screen.dart';
+import 'screens/orders/order_details_screen.dart';
+import 'screens/payment/payment_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  runApp(
-    DevicePreview(
-      enabled:
-          !kReleaseMode, // Set to false to disable preview in release builds
-      tools: const [...DevicePreview.defaultTools],
-      builder: (context) => const MyApp(),
-    ),
-  );
+  await Firebase.initializeApp();
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -28,64 +33,51 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      locale: DevicePreview.locale(context),
-      builder: DevicePreview.appBuilder,
-      title: 'WhatsApp clone',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primaryColor: Colors.teal,
-        textTheme: GoogleFonts.poppinsTextTheme(),
-      ),
-      home: SplashScreen(),
-    );
-  }
-}
-
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
-
-  @override
-  _SplashScreenState createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    startTimer();
-  }
-
-  startTimer() {
-    Timer(Duration(seconds: 2), () async {
-      if (FirebaseAuth.instance.currentUser != null) {
-        Route newRoute = MaterialPageRoute(builder: (_) => HomePage());
-        Navigator.pushReplacement(context, newRoute);
-      } else {
-        /// Not SignedIn
-        Route newRoute = MaterialPageRoute(builder: (_) => AuthenticatePage());
-        Navigator.pushReplacement(context, newRoute);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      child: Container(
-        color: Colors.white,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Image.asset(''),
-              const SizedBox(height: 20),
-              const Text('Welcome to Book Store'),
-              const SizedBox(height: 20),
-              const CircularProgressIndicator(),
-            ],
-          ),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppProvider()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => BookProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(create: (_) => WishlistProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+      ],
+      child: MaterialApp(
+        title: 'Book Store',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+          useMaterial3: true,
         ),
+        home: const SplashScreen(),
+        debugShowCheckedModeBanner: false,
+        routes: {
+          '/admin': (context) => const AdminDashboard(),
+          '/admin/books': (context) => const BookManagementScreen(),
+          '/admin/book-edit': (context) => const BookEditScreen(),
+          '/admin/categories': (context) => const CategoryManagementScreen(),
+          '/admin/orders': (context) => const OrderManagementScreen(),
+          '/wishlist': (context) => const WishlistScreen(),
+          '/profile': (context) => const ProfileScreen(),
+          '/settings': (context) => const SettingsScreen(),
+          '/orders': (context) => const OrderHistoryScreen(),
+        },
+        onGenerateRoute: (settings) {
+          if (settings.name == '/order-details') {
+            final order = settings.arguments as Order;
+            return MaterialPageRoute(
+              builder: (context) => OrderDetailsScreen(order: order),
+            );
+          }
+          if (settings.name == '/payment') {
+            final order = settings.arguments as Order;
+            return MaterialPageRoute(
+              builder: (context) => PaymentScreen(order: order),
+            );
+          }
+          return null;
+        },
       ),
     );
   }
