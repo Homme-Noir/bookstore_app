@@ -21,12 +21,6 @@ class _StoreScreenState extends State<StoreScreen> {
   /// The currently selected sort option for ordering books.
   String _selectedSort = 'Newest';
 
-  /// The number of books to display per page.
-  final int _pageSize = 10;
-
-  /// The current page number for pagination.
-  final int _currentPage = 1;
-
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AppProvider>(context, listen: false);

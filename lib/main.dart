@@ -10,6 +10,7 @@ import 'providers/order_provider.dart';
 import 'providers/wishlist_provider.dart';
 import 'providers/user_provider.dart';
 import 'models/order.dart';
+import 'models/address.dart';
 import 'screens/splash_screen.dart';
 import 'screens/admin/admin_dashboard.dart';
 import 'screens/admin/book_management_screen.dart';
@@ -113,13 +114,19 @@ class MyApp extends StatelessWidget {
           if (settings.name == '/order-details') {
             final order = settings.arguments as Order;
             return MaterialPageRoute(
-              builder: (context) => OrderDetailsScreen(order: order),
+              builder: (context) => OrderDetailsScreen(
+                order: order,
+              ),
             );
           }
           if (settings.name == '/payment') {
-            final order = settings.arguments as Order;
+            final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(
-              builder: (context) => PaymentScreen(order: order),
+              builder: (context) => PaymentScreen(
+                items: args['items'] as List<Map<String, dynamic>>,
+                address: args['address'] as ShippingAddress,
+                total: args['total'] as double,
+              ),
             );
           }
           return null;

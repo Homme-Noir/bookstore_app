@@ -15,8 +15,8 @@ class AuthProvider with ChangeNotifier {
   AuthProvider({
     required AuthService authService,
     required UserService userService,
-  }) : _authService = authService,
-       _userService = userService {
+  })  : _authService = authService,
+        _userService = userService {
     _init();
   }
 
@@ -71,8 +71,9 @@ class AuthProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      final user = await _authService.signUp(email, password);
-      await _userService.createUserData(userData);
+      final userCredential = await _authService.signUp(email, password);
+      await _userService
+          .createUserData(userData.copyWith(id: userCredential.user!.uid));
     } catch (e) {
       _error = e.toString();
       notifyListeners();
