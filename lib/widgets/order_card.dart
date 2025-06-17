@@ -24,25 +24,24 @@ class OrderCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Order #${order.id}',
+                    'Order #${order.id.substring(0, 8)}',
                     style: const TextStyle(
-                      fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
                   ),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Color(int.parse(_getStatusColor(order.status)
-                          .replaceAll('#', '0xFF'))),
-                      borderRadius: BorderRadius.circular(4),
+                      color: _getStatusColor(order.status).withAlpha(25),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       _getStatusText(order.status),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
+                      style: TextStyle(
+                        color: _getStatusColor(order.status),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
@@ -50,15 +49,15 @@ class OrderCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Date: ${DateFormat('MMM dd, yyyy').format(order.createdAt)}',
+                DateFormat('MMM dd, yyyy').format(order.createdAt),
                 style: const TextStyle(color: Colors.grey),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               Text(
-                'Total: \$${order.total.toStringAsFixed(2)}',
+                '\$${order.total.toStringAsFixed(2)}',
                 style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
                 ),
               ),
             ],
@@ -68,20 +67,18 @@ class OrderCard extends StatelessWidget {
     );
   }
 
-  String _getStatusColor(model.OrderStatus status) {
+  Color _getStatusColor(model.OrderStatus status) {
     switch (status) {
       case model.OrderStatus.pending:
-        return '#FFA500';
+        return Colors.orange;
       case model.OrderStatus.processing:
-        return '#1E90FF';
+        return Colors.blue;
       case model.OrderStatus.shipped:
-        return '#32CD32';
+        return Colors.purple;
       case model.OrderStatus.delivered:
-        return '#008000';
+        return Colors.green;
       case model.OrderStatus.cancelled:
-        return '#FF0000';
-      default:
-        return '#808080';
+        return Colors.red;
     }
   }
 
@@ -118,14 +115,14 @@ Widget sourceInfo(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              SizedBox(height: 15),
+              const SizedBox(height: 15),
               Row(
                 mainAxisSize: MainAxisSize.max,
                 children: <Widget>[
                   Expanded(
                     child: Text(
                       model.title,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.purple,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -133,12 +130,12 @@ Widget sourceInfo(
                     ),
                   ),
                   CircleAvatar(radius: 3, backgroundColor: background),
-                  SizedBox(width: 5),
+                  const SizedBox(width: 5),
                   Text(
                     model.pageCount.toString(),
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                    style: const TextStyle(color: Colors.grey, fontSize: 14),
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                 ],
               ),
             ],

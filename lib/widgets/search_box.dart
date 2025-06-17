@@ -1,55 +1,71 @@
 import 'package:flutter/material.dart';
+import '../services/book_service.dart';
 
-import '../screens/store/search_screen.dart';
-
-class SearchBoxDelegate extends SliverPersistentHeaderDelegate {
+class SearchBoxDelegate extends SearchDelegate {
   @override
-  Widget build(
-          BuildContext context, double shrinkOffset, bool overlapsContent) =>
-      InkWell(
-        onTap: () {
-          Route route = MaterialPageRoute(builder: (_) => SearchProduct());
-          Navigator.push(context, route);
+  List<Widget> buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.clear),
+        onPressed: () {
+          query = '';
         },
-        child: Container(
-            alignment: Alignment.center,
-            width: MediaQuery.of(context).size.width,
-            height: 80.0,
-            color: Colors.blueGrey,
-            child: InkWell(
-                child: Container(
-              width: MediaQuery.of(context).size.width - 40.0,
-              height: 50.0,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(5.0),
-              ),
-              child: Row(
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: Icon(
-                      Icons.search,
-                      color: Colors.blueGrey,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: Text("Search here"),
-                  )
-                ],
-              ),
-            ))),
-      );
+      ),
+    ];
+  }
 
   @override
-  double get maxExtent => 80;
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () {
+        close(context, null);
+      },
+    );
+  }
 
   @override
-  double get minExtent => 80;
+  Widget buildResults(BuildContext context) {
+    return _buildSearchResults(context);
+  }
 
   @override
-  bool shouldRebuild(SliverPersistentHeaderDelegate oldDelegate) => true;
+  Widget buildSuggestions(BuildContext context) {
+    return _buildSearchResults(context);
+  }
+
+  Widget _buildSearchResults(BuildContext context) {
+    final bookService = BookService();
+    return StreamBuilder(
+      stream: bookService.searchBooksStream(query),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Center(child: Text('Error occurred'));
+        }
+
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final books = snapshot.data!;
+        if (books.isEmpty) {
+          return const Center(child: Text('No books found'));
+        }
+
+        return ListView.builder(
+          itemCount: books.length,
+          itemBuilder: (context, index) {
+            final book = books[index];
+            return ListTile(
+              title: Text(book.title),
+              subtitle: Text('\$${book.price.toStringAsFixed(2)}'),
+              onTap: () {
+                close(context, book);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
 }
-
-

@@ -315,7 +315,7 @@ class _ReviewCard extends StatelessWidget {
                       ),
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.star,
                             size: 16,
                             color: Colors.amber,

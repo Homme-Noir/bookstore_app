@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/widgets.dart';
 import '../models/book.dart';
 
 /// A service class that manages all Firestore operations related to books.
@@ -97,8 +98,8 @@ class BookService {
     query = _applySorting(query, sort).limit(pageSize);
 
     return query.snapshots().map(
-      (snapshot) => snapshot.docs.map(Book.fromFirestore).toList(),
-    );
+          (snapshot) => snapshot.docs.map(Book.fromFirestore).toList(),
+        );
   }
 
   /// Stream of filtered bestseller books.
@@ -118,8 +119,8 @@ class BookService {
     query = _applySorting(query, sort).limit(pageSize);
 
     return query.snapshots().map(
-      (snapshot) => snapshot.docs.map(Book.fromFirestore).toList(),
-    );
+          (snapshot) => snapshot.docs.map(Book.fromFirestore).toList(),
+        );
   }
 
   /// Stream of filtered new arrival books.
@@ -139,8 +140,8 @@ class BookService {
     query = _applySorting(query, sort).limit(pageSize);
 
     return query.snapshots().map(
-      (snapshot) => snapshot.docs.map(Book.fromFirestore).toList(),
-    );
+          (snapshot) => snapshot.docs.map(Book.fromFirestore).toList(),
+        );
   }
 
   /// Stream of books by genre.
@@ -173,12 +174,11 @@ class BookService {
 
   /// One-time search for books by title.
   Future<List<Book>> searchBooks(String query) async {
-    final snapshot =
-        await _firestore
-            .collection(_collection)
-            .where('title', isGreaterThanOrEqualTo: query)
-            .where('title', isLessThanOrEqualTo: '$query\uf8ff')
-            .get();
+    final snapshot = await _firestore
+        .collection(_collection)
+        .where('title', isGreaterThanOrEqualTo: query)
+        .where('title', isLessThanOrEqualTo: '$query\uf8ff')
+        .get();
     return snapshot.docs.map(Book.fromFirestore).toList();
   }
 
@@ -203,7 +203,7 @@ class BookService {
     try {
       await _firestore.collection(_collection).doc(book.id).set(book.toMap());
     } catch (e) {
-      print('Error adding book: $e');
+      debugPrint('Error adding book: $e');
       rethrow;
     }
   }
@@ -216,7 +216,7 @@ class BookService {
           .doc(book.id)
           .update(book.toMap());
     } catch (e) {
-      print('Error updating book: $e');
+      debugPrint('Error updating book: $e');
       rethrow;
     }
   }
@@ -226,7 +226,7 @@ class BookService {
     try {
       await _firestore.collection(_collection).doc(id).delete();
     } catch (e) {
-      print('Error deleting book: $e');
+      debugPrint('Error deleting book: $e');
       rethrow;
     }
   }

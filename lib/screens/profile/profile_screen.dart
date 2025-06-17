@@ -3,17 +3,31 @@ import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 
 /// A screen that displays the user's profile information and allows for profile updates.
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  Future<void> _signOut() async {
+    try {
+      await Provider.of<AppProvider>(context, listen: false).signOut();
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed('/login');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error signing out: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AppProvider>(context);
     final user = provider.user;
-
-    if (user == null) {
-      return const Center(child: Text('Please sign in to view your profile.'));
-    }
 
     return Scaffold(
       appBar: AppBar(
@@ -21,36 +35,60 @@ class ProfileScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await provider.signOut();
-              Navigator.of(context).pushReplacementNamed('/login');
-            },
+            onPressed: () => _signOut(),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'User Information',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      body: user == null
+          ? const Center(child: Text('Not logged in'))
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                CircleAvatar(
+                  radius: 50,
+                  backgroundImage: user.photoURL != null
+                      ? NetworkImage(user.photoURL!)
+                      : null,
+                  child: user.photoURL == null
+                      ? const Icon(Icons.person, size: 50)
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  user.displayName ?? 'No name',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  user.email ?? 'No email',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                ListTile(
+                  leading: const Icon(Icons.settings),
+                  title: const Text('Settings'),
+                  onTap: () {
+                    Navigator.pushNamed(context, '/settings');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.shopping_bag),
+                  title: const Text('Orders'),
+                  onTap: () {
+                    Navigator.pushNamed(context, '/orders');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.favorite),
+                  title: const Text('Wishlist'),
+                  onTap: () {
+                    Navigator.pushNamed(context, '/wishlist');
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text('Email: ${user.email}'),
-            const SizedBox(height: 8),
-            Text('Name: ${user.displayName ?? 'Not set'}'),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                // Navigate to edit profile screen
-              },
-              child: const Text('Edit Profile'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -78,4 +116,4 @@ class _SettingsCard extends StatelessWidget {
       ),
     );
   }
-} 
+}

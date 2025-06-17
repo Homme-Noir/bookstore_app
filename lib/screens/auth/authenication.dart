@@ -39,7 +39,7 @@ class _AuthenticScreenState extends State<AuthenticScreen> {
             indicatorWeight: 5.0,
           ),
         ),
-        body: TabBarView(
+        body: const TabBarView(
           children: [
             LoginScreen(),
             RegisterScreen(),

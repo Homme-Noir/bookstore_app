@@ -49,49 +49,31 @@ class CategoryManagementScreen extends StatelessWidget {
                 category: category,
                 onEdit: () async {
                   final newName = await _showEditDialog(context, category);
-                  if (newName != null && context.mounted) {
+                  if (newName != null) {
+                    if (!context.mounted) return;
                     try {
                       await context
                           .read<AppProvider>()
                           .updateCategory(category, newName);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Category updated successfully')),
-                        );
-                      }
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Category updated successfully')),
+                      );
                     } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text('Error updating category: $e')),
-                        );
-                      }
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error updating category: $e')),
+                      );
                     }
                   }
                 },
                 onDelete: () async {
                   final confirmed =
                       await _showDeleteConfirmation(context, category);
-                  if (confirmed == true && context.mounted) {
-                    try {
-                      await context
-                          .read<AppProvider>()
-                          .deleteCategory(category);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Category deleted successfully')),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text('Error deleting category: $e')),
-                        );
-                      }
-                    }
+                  if (!context.mounted) return;
+                  if (confirmed == true) {
+                    await _deleteCategory(context, category);
                   }
                 },
               );
@@ -124,6 +106,9 @@ class CategoryManagementScreen extends StatelessWidget {
         ],
       ),
     );
+
+    if (!context.mounted) return;
+
     if (result != null && result.isNotEmpty) {
       await context.read<AppProvider>().addCategory(result);
     }
@@ -156,24 +141,42 @@ class CategoryManagementScreen extends StatelessWidget {
 
   Future<bool> _showDeleteConfirmation(
       BuildContext context, String category) async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Delete Category'),
-            content: Text('Are you sure you want to delete "$category"?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Delete'),
-              ),
-            ],
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Category'),
+        content: Text('Are you sure you want to delete "$category"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
           ),
-        ) ??
-        false;
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  Future<void> _deleteCategory(BuildContext context, String category) async {
+    try {
+      await Provider.of<AppProvider>(context, listen: false)
+          .deleteCategory(category);
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Category deleted successfully')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error deleting category: $e')),
+      );
+    }
   }
 }
 

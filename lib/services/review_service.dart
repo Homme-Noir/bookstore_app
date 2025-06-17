@@ -29,7 +29,10 @@ class ReviewService {
         .get();
 
     final totalRating = bookReviews.docs.fold<double>(
-        0, (sum, doc) => sum + (doc.data()['rating'] as num).toDouble());
+      0,
+      (previousValue, doc) =>
+          previousValue + (doc.data()['rating'] as num).toDouble(),
+    );
     final averageRating = totalRating / bookReviews.docs.length;
 
     await _firestore.collection('books').doc(review.bookId).update({
@@ -76,7 +79,9 @@ class ReviewService {
       });
     } else {
       final totalRating = bookReviews.docs.fold<double>(
-          0, (sum, doc) => sum + (doc.data()['rating'] as num).toDouble());
+        0,
+        (previous, doc) => previous + (doc.data()['rating'] as num).toDouble(),
+      );
       final averageRating = totalRating / bookReviews.docs.length;
 
       await _firestore.collection('books').doc(bookId).update({
@@ -85,4 +90,4 @@ class ReviewService {
       });
     }
   }
-} 
+}

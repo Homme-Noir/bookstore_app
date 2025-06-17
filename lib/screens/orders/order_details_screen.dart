@@ -126,7 +126,7 @@ class _OrderStatusCard extends StatelessWidget {
     }
 
     return Card(
-      color: color.withOpacity(0.1),
+      color: color.withAlpha(25),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(

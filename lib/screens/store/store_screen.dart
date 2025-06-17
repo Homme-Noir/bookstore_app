@@ -25,7 +25,7 @@ class _StoreScreenState extends State<StoreScreen> {
   final int _pageSize = 10;
 
   /// The current page number for pagination.
-  int _currentPage = 1;
+  final int _currentPage = 1;
 
   @override
   Widget build(BuildContext context) {

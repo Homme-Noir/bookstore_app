@@ -54,7 +54,7 @@ class AppProvider extends ChangeNotifier {
   List<CartItem> _cartItems = [];
 
   /// Returns whether the provider is currently loading data.
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   /// Returns whether the user is authenticated.
   bool get isAuthenticated => _user != null;
@@ -144,11 +144,11 @@ class AppProvider extends ChangeNotifier {
 
   /// Returns the total number of items in the user's cart.
   int get cartItemCount =>
-      _cartItems.fold(0, (sum, item) => sum + (item.quantity ?? 0));
+      _cartItems.fold(0, (sum, item) => sum + item.quantity);
 
   /// Returns the total price of items in the user's cart.
-  double get cartTotal => _cartItems.fold(
-      0.0, (sum, item) => sum + ((item.price ?? 0.0) * (item.quantity ?? 0)));
+  double get cartTotal =>
+      _cartItems.fold(0.0, (sum, item) => sum + (item.price * item.quantity));
 
   /// Signs in a user with the provided email and password.
   Future<void> signIn(String email, String password) async {
