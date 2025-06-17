@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' hide Card;
 import '../../providers/app_provider.dart';
 import '../../models/address.dart';
 
@@ -21,16 +22,46 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   bool _isProcessing = false;
+  final _cardFormKey = GlobalKey<FormState>();
+  CardFormEditController _cardFormController = CardFormEditController();
+
+  @override
+  void initState() {
+    super.initState();
+    _cardFormController = CardFormEditController();
+  }
+
+  @override
+  void dispose() {
+    _cardFormController.dispose();
+    super.dispose();
+  }
 
   Future<void> _processPayment() async {
+    if (!_cardFormKey.currentState!.validate()) {
+      return;
+    }
+
     setState(() {
       _isProcessing = true;
     });
 
     try {
-      // TODO: Integrate with actual payment gateway
-      await Future.delayed(
-          const Duration(seconds: 2)); // Simulate payment processing
+      // Create payment intent on your backend
+      final response = await Provider.of<AppProvider>(context, listen: false)
+          .createPaymentIntent(widget.total);
+
+      // Initialize payment sheet
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: response['clientSecret'],
+          merchantDisplayName: 'Bookstore App',
+          style: ThemeMode.system,
+        ),
+      );
+
+      // Present payment sheet
+      await Stripe.instance.presentPaymentSheet();
 
       if (!mounted) return;
 
@@ -64,7 +95,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       appBar: AppBar(
         title: const Text('Payment'),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -102,7 +133,29 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ),
               ),
             ),
-            const Spacer(),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Payment Details',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 16),
+                    Form(
+                      key: _cardFormKey,
+                      child: CardFormField(
+                        controller: _cardFormController,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _isProcessing ? null : _processPayment,
               child: _isProcessing

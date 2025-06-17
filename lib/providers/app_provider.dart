@@ -1,6 +1,8 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../services/cart_service.dart';
@@ -53,6 +55,9 @@ class AppProvider extends ChangeNotifier {
   /// The list of items in the user's cart.
   List<CartItem> _cartItems = [];
 
+  /// The current theme mode of the application.
+  ThemeMode _themeMode = ThemeMode.system;
+
   /// Returns whether the provider is currently loading data.
   final bool _isLoading = false;
 
@@ -61,6 +66,9 @@ class AppProvider extends ChangeNotifier {
 
   /// Returns whether the provider is currently loading data.
   bool get isLoading => _isLoading;
+
+  /// Returns the current theme mode.
+  ThemeMode get themeMode => _themeMode;
 
   /// Creates a new instance of AppProvider.
   AppProvider({
@@ -77,6 +85,12 @@ class AppProvider extends ChangeNotifier {
         _userService = userService,
         _firestore = firestore {
     _init();
+  }
+
+  /// Sets the theme mode of the application.
+  void setTheme(ThemeMode mode) {
+    _themeMode = mode;
+    notifyListeners();
   }
 
   /// Initializes the provider by setting up listeners for user changes and loading initial data.
@@ -465,5 +479,36 @@ class AppProvider extends ChangeNotifier {
   /// Resets the password for a user with the provided email.
   Future<void> resetPassword(String email) async {
     await _authService.resetPassword(email);
+  }
+
+  /// Creates a payment intent with Stripe for the given amount.
+  Future<Map<String, dynamic>> createPaymentIntent(double amount) async {
+    try {
+      // In a real app, this should be done on your backend server
+      // For demo purposes, we're using a test API key
+      const String stripeSecretKey = 'YOUR_STRIPE_SECRET_KEY';
+      const String stripeApiUrl = 'https://api.stripe.com/v1/payment_intents';
+
+      final response = await http.post(
+        Uri.parse(stripeApiUrl),
+        headers: {
+          'Authorization': 'Bearer $stripeSecretKey',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: {
+          'amount': (amount * 100).toInt().toString(), // Convert to cents
+          'currency': 'usd',
+          'payment_method_types[]': 'card',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to create payment intent: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Failed to create payment intent: $e');
+    }
   }
 }

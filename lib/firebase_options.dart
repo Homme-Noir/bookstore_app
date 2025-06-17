@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDZsgA8c7ner-sZnxFnN22boad_Xcf-5K4',
-    appId: '1:754175928853:android:d5b28d0170837b3edf3c1c',
+    appId: '1:754175928853:android:54ce7aeddf1cdcacdf3c1c',
     messagingSenderId: '754175928853',
     projectId: 'bookstore-app-28217',
     storageBucket: 'bookstore-app-28217.firebasestorage.app',

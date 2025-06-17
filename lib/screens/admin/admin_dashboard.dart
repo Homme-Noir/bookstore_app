@@ -4,6 +4,7 @@ import '../../providers/app_provider.dart';
 import 'book_management_screen.dart';
 import 'category_management_screen.dart';
 import 'order_management_screen.dart';
+import 'analytics_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -72,7 +73,11 @@ class AdminDashboard extends StatelessWidget {
             icon: Icons.analytics,
             color: Colors.purple,
             onTap: () {
-              // TODO: Implement analytics screen
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const AnalyticsScreen(),
+                ),
+              );
             },
           ),
         ],
@@ -135,4 +140,4 @@ class _DashboardCard extends StatelessWidget {
       ),
     );
   }
-} 
+}

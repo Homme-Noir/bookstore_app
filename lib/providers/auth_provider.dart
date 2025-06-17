@@ -115,6 +115,36 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<UserCredential> registerWithEmailAndPassword(
+    String email,
+    String password,
+    String name,
+  ) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final userCredential = await _authService.signUp(email, password);
+      await _userService.createUserData(
+        UserData(
+          id: userCredential.user!.uid,
+          name: name,
+          email: email,
+        ),
+      );
+
+      return userCredential;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();
