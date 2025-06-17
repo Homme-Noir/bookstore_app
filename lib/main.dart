@@ -38,12 +38,11 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     debugPrint('Firebase initialized successfully');
+    runApp(const MyApp());
   } catch (e) {
     debugPrint('Error initializing Firebase: $e');
-    // Continue running the app even if Firebase fails to initialize
+    runApp(const FirebaseInitErrorApp());
   }
-
-  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -131,6 +130,26 @@ class MyApp extends StatelessWidget {
           }
           return null;
         },
+      ),
+    );
+  }
+}
+
+class FirebaseInitErrorApp extends StatelessWidget {
+  const FirebaseInitErrorApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(
+          child: Text(
+            'Error initializing Firebase.\nPlease check your configuration.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 18, color: Colors.red),
+          ),
+        ),
       ),
     );
   }
