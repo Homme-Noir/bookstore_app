@@ -28,7 +28,7 @@ import 'services/book_service.dart';
 import 'services/cart_service.dart';
 import 'services/order_service.dart';
 import 'services/user_service.dart';
-import 'firebase_options.dart';
+import 'firebase_options/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
