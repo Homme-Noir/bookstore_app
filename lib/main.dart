@@ -29,6 +29,7 @@ import 'services/cart_service.dart';
 import 'services/order_service.dart';
 import 'services/user_service.dart';
 import 'firebase_options/firebase_options.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -91,11 +92,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Book Store',
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-          useMaterial3: true,
-        ),
+        theme: AppTheme.lightTheme,
         home: const SplashScreen(),
         debugShowCheckedModeBanner: false,
         routes: {

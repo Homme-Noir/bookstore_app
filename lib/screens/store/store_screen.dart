@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../models/book.dart';
+import '../../widgets/book_card.dart';
+import '../../widgets/loading_widget.dart';
 import 'search_screen.dart';
 import 'book_details_screen.dart';
 
@@ -25,6 +27,7 @@ class _StoreScreenState extends State<StoreScreen> {
   Widget build(BuildContext context) {
     final provider = Provider.of<AppProvider>(context, listen: false);
     final categories = ['All', ...provider.categories];
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -52,6 +55,7 @@ class _StoreScreenState extends State<StoreScreen> {
         ),
         body: Column(
           children: [
+            // Filter controls
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
@@ -114,179 +118,24 @@ class _StoreScreenState extends State<StoreScreen> {
                 ],
               ),
             ),
+            // Book lists
             Expanded(
               child: TabBarView(
                 children: [
-                  StreamBuilder<List<Book>>(
+                  _buildBookList(
                     stream: provider.getBooksFiltered(
                       category:
                           _selectedCategory == 'All' ? null : _selectedCategory,
                     ),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      if (snapshot.hasError) {
-                        return Center(
-                          child: Text('Error: ${snapshot.error}'),
-                        );
-                      }
-
-                      final books = snapshot.data ?? [];
-
-                      if (books.isEmpty) {
-                        return const Center(
-                          child: Text('No books found'),
-                        );
-                      }
-
-                      return ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: books.length,
-                        itemBuilder: (context, index) {
-                          final book = books[index];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            child: ListTile(
-                              leading: Image.network(
-                                book.coverImage,
-                                width: 60,
-                                height: 90,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(Icons.error);
-                                },
-                              ),
-                              title: Text(book.title),
-                              subtitle:
-                                  Text('\$${book.price.toStringAsFixed(2)}'),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        BookDetailsScreen(book: book),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      );
-                    },
+                    emptyMessage: 'No books found',
                   ),
-                  StreamBuilder<List<Book>>(
+                  _buildBookList(
                     stream: provider.getBestsellers(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      if (snapshot.hasError) {
-                        return Center(
-                          child: Text('Error: ${snapshot.error}'),
-                        );
-                      }
-
-                      final books = snapshot.data ?? [];
-
-                      if (books.isEmpty) {
-                        return const Center(
-                          child: Text('No bestsellers found'),
-                        );
-                      }
-
-                      return ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: books.length,
-                        itemBuilder: (context, index) {
-                          final book = books[index];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            child: ListTile(
-                              leading: Image.network(
-                                book.coverImage,
-                                width: 60,
-                                height: 90,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(Icons.error);
-                                },
-                              ),
-                              title: Text(book.title),
-                              subtitle:
-                                  Text('\$${book.price.toStringAsFixed(2)}'),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        BookDetailsScreen(book: book),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      );
-                    },
+                    emptyMessage: 'No bestsellers found',
                   ),
-                  StreamBuilder<List<Book>>(
+                  _buildBookList(
                     stream: provider.getNewArrivals(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      if (snapshot.hasError) {
-                        return Center(
-                          child: Text('Error: ${snapshot.error}'),
-                        );
-                      }
-
-                      final books = snapshot.data ?? [];
-
-                      if (books.isEmpty) {
-                        return const Center(
-                          child: Text('No new arrivals found'),
-                        );
-                      }
-
-                      return ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: books.length,
-                        itemBuilder: (context, index) {
-                          final book = books[index];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            child: ListTile(
-                              leading: Image.network(
-                                book.coverImage,
-                                width: 60,
-                                height: 90,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(Icons.error);
-                                },
-                              ),
-                              title: Text(book.title),
-                              subtitle:
-                                  Text('\$${book.price.toStringAsFixed(2)}'),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        BookDetailsScreen(book: book),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      );
-                    },
+                    emptyMessage: 'No new arrivals found',
                   ),
                 ],
               ),
@@ -294,6 +143,89 @@ class _StoreScreenState extends State<StoreScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Builds a book list with proper loading and error handling
+  Widget _buildBookList({
+    required Stream<List<Book>> stream,
+    required String emptyMessage,
+  }) {
+    return StreamBuilder<List<Book>>(
+      stream: stream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LoadingWidget(message: 'Loading books...');
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.red,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading books',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Please try again later',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey,
+                      ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final books = snapshot.data ?? [];
+
+        if (books.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.book_outlined,
+                  size: 64,
+                  color: Colors.grey,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  emptyMessage,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: books.length,
+          itemBuilder: (context, index) {
+            final book = books[index];
+            return BookCard(
+              book: book,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => BookDetailsScreen(book: book),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }
