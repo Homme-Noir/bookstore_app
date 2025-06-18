@@ -144,12 +144,14 @@ class AppTheme {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         labelStyle: GoogleFonts.poppins(color: textSecondary),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
         color: surfaceColor,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.black.withValues(alpha: 0.1),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: surfaceColor,

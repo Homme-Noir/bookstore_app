@@ -23,6 +23,11 @@ import 'screens/profile/settings_screen.dart';
 import 'screens/orders/order_history_screen.dart';
 import 'screens/orders/order_details_screen.dart';
 import 'screens/payment/payment_screen.dart';
+import 'screens/auth/register_screen.dart';
+import 'screens/auth/forgot_password_screen.dart';
+import 'screens/store/cart.dart';
+import 'screens/store/checkout_screen.dart';
+import 'screens/store/order_success_screen.dart';
 import 'services/auth_service.dart';
 import 'services/book_service.dart';
 import 'services/cart_service.dart';
@@ -105,6 +110,11 @@ class MyApp extends StatelessWidget {
           '/profile': (context) => const ProfileScreen(),
           '/settings': (context) => const SettingsScreen(),
           '/orders': (context) => const OrderHistoryScreen(),
+          '/register_screen': (context) => const RegisterScreen(),
+          '/forgot_password_screen': (context) => const ForgotPasswordScreen(),
+          '/cart': (context) => const CartScreen(),
+          '/checkout': (context) => const CheckoutScreen(),
+          '/order-success': (context) => const OrderSuccessScreen(),
         },
         onGenerateRoute: (settings) {
           if (settings.name == '/order-details') {
