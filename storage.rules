@@ -1,0 +1,115 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && 
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    // Validate image file
+    function isValidImage() {
+      return request.resource.size < 5 * 1024 * 1024 && // 5MB max
+             request.resource.contentType.matches('image/.*');
+    }
+    
+    // ========================================
+    // BOOK COVERS
+    // ========================================
+    match /book-covers/{fileName} {
+      // Anyone can read book covers (public)
+      allow read: if true;
+      
+      // Only admins can upload book covers
+      allow write: if isAdmin() && isValidImage();
+    }
+    
+    // ========================================
+    // USER PROFILE PICTURES
+    // ========================================
+    match /profile-pictures/{userId}/{fileName} {
+      // Anyone can read profile pictures (public)
+      allow read: if true;
+      
+      // Users can upload their own profile picture
+      allow write: if isAuthenticated() && 
+        request.auth.uid == userId && 
+        isValidImage();
+    }
+    
+    // ========================================
+    // BOOK IMAGES (Alternative structure)
+    // ========================================
+    match /books/{bookId}/images/{fileName} {
+      // Anyone can read book images
+      allow read: if true;
+      
+      // Only admins can upload book images
+      allow write: if isAdmin() && isValidImage();
+    }
+    
+    // ========================================
+    // CATEGORY IMAGES
+    // ========================================
+    match /category-images/{fileName} {
+      // Anyone can read category images
+      allow read: if true;
+      
+      // Only admins can upload category images
+      allow write: if isAdmin() && isValidImage();
+    }
+    
+    // ========================================
+    // BANNER IMAGES
+    // ========================================
+    match /banners/{fileName} {
+      // Anyone can read banner images
+      allow read: if true;
+      
+      // Only admins can upload banner images
+      allow write: if isAdmin() && isValidImage();
+    }
+    
+    // ========================================
+    // TEMPORARY UPLOADS
+    // ========================================
+    match /temp/{userId}/{fileName} {
+      // Users can upload temporary files
+      allow write: if isAuthenticated() && 
+        request.auth.uid == userId && 
+        isValidImage();
+      
+      // Users can read their own temporary files
+      allow read: if isAuthenticated() && 
+        request.auth.uid == userId;
+      
+      // Auto-delete temporary files after 24 hours (handled by Cloud Functions)
+    }
+    
+    // ========================================
+    // ADMIN UPLOADS
+    // ========================================
+    match /admin/{fileName} {
+      // Only admins can access admin uploads
+      allow read, write: if isAdmin();
+    }
+    
+    // ========================================
+    // FALLBACK RULE
+    // ========================================
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+} 

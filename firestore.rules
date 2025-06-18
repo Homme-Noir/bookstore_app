@@ -1,0 +1,257 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    // Check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Check if user owns the order
+    function isOrderOwner(orderData) {
+      return isAuthenticated() && request.auth.uid == orderData.userId;
+    }
+    
+    // Validate book data structure
+    function isValidBook(data) {
+      return data.keys().hasAll(['title', 'author', 'description', 'price', 'genres', 'stock']) &&
+             data.title is string && data.title.size() > 0 &&
+             data.author is string && data.author.size() > 0 &&
+             data.description is string && data.description.size() > 0 &&
+             data.price is number && data.price > 0 &&
+             data.genres is list && data.genres.size() > 0 &&
+             data.stock is number && data.stock >= 0;
+    }
+    
+    // Validate user data structure
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'email']) &&
+             data.name is string && data.name.size() > 0 &&
+             data.email is string && data.email.size() > 0;
+    }
+    
+    // Validate order data structure
+    function isValidOrder(data) {
+      return data.keys().hasAll(['userId', 'items', 'totalAmount', 'shippingAddress']) &&
+             data.userId is string && data.userId.size() > 0 &&
+             data.items is list && data.items.size() > 0 &&
+             data.totalAmount is number && data.totalAmount > 0;
+    }
+    
+    // ========================================
+    // USERS COLLECTION
+    // ========================================
+    match /users/{userId} {
+      // Users can read/write their own profile
+      allow read, write: if isOwner(userId);
+      
+      // Admins can read all user profiles
+      allow read: if isAdmin();
+      
+      // Users can create their own profile during registration
+      allow create: if isOwner(userId) && isValidUser(resource.data);
+      
+      // Users can update their own profile
+      allow update: if isOwner(userId) && isValidUser(resource.data);
+      
+      // Users can delete their own profile
+      allow delete: if isOwner(userId);
+      
+      // ========================================
+      // USER SUBCOLLECTIONS
+      // ========================================
+      
+      // Cart subcollection - users can manage their own cart
+      match /cart/{cartItemId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // Wishlist subcollection - users can manage their own wishlist
+      match /wishlist/{wishlistItemId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // Addresses subcollection - users can manage their own addresses
+      match /addresses/{addressId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // Payment methods subcollection - users can manage their own payment methods
+      match /payment_methods/{paymentMethodId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+    
+    // ========================================
+    // BOOKS COLLECTION
+    // ========================================
+    match /books/{bookId} {
+      // Anyone can read books (public catalog)
+      allow read: if true;
+      
+      // Only admins can create, update, delete books
+      allow create, update, delete: if isAdmin() && isValidBook(resource.data);
+      
+      // ========================================
+      // BOOK REVIEWS SUBCOLLECTION
+      // ========================================
+      match /reviews/{reviewId} {
+        // Anyone can read reviews
+        allow read: if true;
+        
+        // Authenticated users can create reviews
+        allow create: if isAuthenticated() && 
+          request.resource.data.userId == request.auth.uid &&
+          request.resource.data.rating >= 1 && request.resource.data.rating <= 5 &&
+          request.resource.data.text is string && request.resource.data.text.size() > 0;
+        
+        // Users can update their own reviews
+        allow update: if isAuthenticated() && 
+          resource.data.userId == request.auth.uid &&
+          request.resource.data.rating >= 1 && request.resource.data.rating <= 5 &&
+          request.resource.data.text is string && request.resource.data.text.size() > 0;
+        
+        // Users can delete their own reviews, admins can delete any review
+        allow delete: if isAuthenticated() && 
+          (resource.data.userId == request.auth.uid || isAdmin());
+      }
+    }
+    
+    // ========================================
+    // ORDERS COLLECTION
+    // ========================================
+    match /orders/{orderId} {
+      // Users can read their own orders
+      allow read: if isAuthenticated() && isOrderOwner(resource.data);
+      
+      // Admins can read all orders
+      allow read: if isAdmin();
+      
+      // Authenticated users can create their own orders
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid &&
+        isValidOrder(request.resource.data);
+      
+      // Users can update their own orders (for cancellations)
+      allow update: if isAuthenticated() && 
+        isOrderOwner(resource.data) &&
+        request.resource.data.userId == request.auth.uid;
+      
+      // Admins can update any order (for status changes)
+      allow update: if isAdmin() && isValidOrder(request.resource.data);
+      
+      // Users can delete their own orders, admins can delete any order
+      allow delete: if isAuthenticated() && 
+        (isOrderOwner(resource.data) || isAdmin());
+    }
+    
+    // ========================================
+    // CATEGORIES COLLECTION
+    // ========================================
+    match /categories/{categoryId} {
+      // Anyone can read categories
+      allow read: if true;
+      
+      // Only admins can manage categories
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ========================================
+    // WISHLISTS COLLECTION (Alternative structure)
+    // ========================================
+    match /wishlists/{wishlistId} {
+      // Users can read/write their own wishlist
+      allow read, write: if isOwner(wishlistId);
+      
+      // ========================================
+      // WISHLIST ITEMS SUBCOLLECTION
+      // ========================================
+      match /items/{itemId} {
+        allow read, write: if isOwner(wishlistId);
+      }
+    }
+    
+    // ========================================
+    // REVIEWS COLLECTION (Alternative structure)
+    // ========================================
+    match /reviews/{reviewId} {
+      // Anyone can read reviews
+      allow read: if true;
+      
+      // Authenticated users can create reviews
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.rating >= 1 && request.resource.data.rating <= 5 &&
+        request.resource.data.text is string && request.resource.data.text.size() > 0;
+      
+      // Users can update their own reviews
+      allow update: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.rating >= 1 && request.resource.data.rating <= 5 &&
+        request.resource.data.text is string && request.resource.data.text.size() > 0;
+      
+      // Users can delete their own reviews, admins can delete any review
+      allow delete: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isAdmin());
+    }
+    
+    // ========================================
+    // ADMIN-SPECIFIC COLLECTIONS
+    // ========================================
+    
+    // Admin settings collection
+    match /admin_settings/{settingId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Analytics collection
+    match /analytics/{analyticsId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // ========================================
+    // SYSTEM COLLECTIONS
+    // ========================================
+    
+    // System notifications
+    match /notifications/{notificationId} {
+      // Users can read notifications sent to them
+      allow read: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      
+      // System can create notifications
+      allow create: if isAuthenticated();
+      
+      // Users can update their own notifications (mark as read)
+      allow update: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      
+      // Users can delete their own notifications
+      allow delete: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // ========================================
+    // FALLBACK RULE
+    // ========================================
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+} 
