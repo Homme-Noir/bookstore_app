@@ -14,6 +14,7 @@ A modern Flutter-based e-commerce application for buying and managing books. Bui
 - **Admin Panel**: Manage books, orders, and users (admin only)
 - **Reviews & Ratings**: User reviews and ratings for books
 - **Responsive Design**: Works on mobile, tablet, and web
+- **Open Library Integration**: Search and import book data from Open Library API
 
 ## 🛠 Tech Stack
 
@@ -144,6 +145,43 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Flutter Documentation](https://flutter.dev/docs)
 - [Firebase Documentation](https://firebase.google.com/docs)
 - [Stripe Documentation](https://stripe.com/docs)
+
+## Open Library API Integration
+
+The app now includes integration with the Open Library API, allowing you to:
+
+### Search for Books
+- **By Title/Author**: Search for books using title or author names
+- **By ISBN**: Look up books directly by their ISBN number
+- **Auto-populate**: Automatically fill book details from Open Library data
+
+### How to Use Open Library Search
+
+1. **From Admin Dashboard**:
+   - Navigate to "Manage Books" in the admin section
+   - Click the search icon in the app bar
+   - Use the search dialog to find books
+
+2. **When Adding New Books**:
+   - Go to "Add Book" screen
+   - Click the "Search Open Library" button
+   - Search by title/author or ISBN
+   - Select a book to auto-populate the form
+
+3. **Features**:
+   - Real-time search results
+   - Book cover images
+   - Author information
+   - Publication dates
+   - ISBN numbers
+   - Page counts
+   - Subject categories
+
+### Supported Search Methods
+
+- **General Search**: Enter book title, author, or keywords
+- **ISBN Search**: Enter the 10 or 13-digit ISBN
+- **Results Display**: Shows book covers, titles, authors, and publication info
 
 ---
 

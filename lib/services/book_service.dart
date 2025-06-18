@@ -201,7 +201,37 @@ class BookService {
   /// Add a new book to Firestore.
   Future<void> addBook(Book book) async {
     try {
-      await _firestore.collection(_collection).doc(book.id).set(book.toMap());
+      // Generate a unique ID if not provided
+      final bookId = book.id.isEmpty
+          ? _firestore.collection(_collection).doc().id
+          : book.id;
+
+      // Create a new book with the generated ID
+      final bookWithId = Book(
+        id: bookId,
+        title: book.title,
+        author: book.author,
+        description: book.description,
+        coverImage: book.coverImage,
+        price: book.price,
+        genres: book.genres,
+        stock: book.stock,
+        rating: book.rating,
+        reviewCount: book.reviewCount,
+        releaseDate: book.releaseDate,
+        isBestseller: book.isBestseller,
+        isNewArrival: book.isNewArrival,
+        isbn: book.isbn,
+        pageCount: book.pageCount,
+        status: book.status,
+        authors: book.authors,
+        categories: book.categories,
+      );
+
+      await _firestore
+          .collection(_collection)
+          .doc(bookId)
+          .set(bookWithId.toMap());
     } catch (e) {
       debugPrint('Error adding book: $e');
       rethrow;

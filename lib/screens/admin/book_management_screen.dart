@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../models/book.dart';
+import '../../dialogs/book_search_dialog.dart';
 import 'book_edit_screen.dart';
 
 class BookManagementScreen extends StatelessWidget {
@@ -13,6 +14,13 @@ class BookManagementScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Manage Books'),
         actions: [
+          // Quick search button
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () => _showQuickSearch(context),
+            tooltip: 'Quick Search Open Library',
+          ),
+          // Add new book button
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
@@ -22,6 +30,7 @@ class BookManagementScreen extends StatelessWidget {
                 ),
               );
             },
+            tooltip: 'Add New Book',
           ),
         ],
       ),
@@ -41,8 +50,29 @@ class BookManagementScreen extends StatelessWidget {
           final books = snapshot.data ?? [];
 
           if (books.isEmpty) {
-            return const Center(
-              child: Text('No books found'),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.library_books, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No books found',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Add your first book to get started',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => _showQuickSearch(context),
+                    icon: const Icon(Icons.search),
+                    label: const Text('Search Open Library'),
+                  ),
+                ],
+              ),
             );
           }
 
@@ -69,6 +99,22 @@ class BookManagementScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  Future<void> _showQuickSearch(BuildContext context) async {
+    final Book? selectedBook = await showDialog<Book>(
+      context: context,
+      builder: (context) => const BookSearchDialog(),
+    );
+
+    if (selectedBook != null && context.mounted) {
+      // Navigate to book edit screen with the selected book data
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => BookEditScreen(book: selectedBook),
+        ),
+      );
+    }
   }
 
   Future<void> _showDeleteConfirmation(BuildContext context, Book book) async {
