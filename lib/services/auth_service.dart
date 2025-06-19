@@ -1,122 +1,56 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'user_service.dart';
+import 'package:sqflite/sqflite.dart';
+import 'db_helper.dart';
+import '../models/user_data.dart';
+import 'package:path/path.dart';
+import 'dart:math';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
-  final UserService _userService = UserService();
-
-  // Get current user
-  User? get currentUser => _auth.currentUser;
-
-  // Auth state changes stream
-  Stream<User?> get onAuthStateChanged => _auth.authStateChanges();
+  final DBHelper _dbHelper = DBHelper();
 
   // Sign in with email and password
-  Future<UserCredential> signIn(String email, String password) async {
-    try {
-      return await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-    } catch (e) {
-      rethrow;
+  Future<UserData?> signIn(String email, String password) async {
+    final db = await _dbHelper.db;
+    final result = await db.query(
+      'users',
+      where: 'email = ? AND password = ?',
+      whereArgs: [email, password],
+    );
+    if (result.isNotEmpty) {
+      return UserData.fromMap(result.first);
     }
+    return null;
   }
 
-  // Register with email and password
-  Future<UserCredential> signUp(String email, String password) async {
-    try {
-      return await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-    } catch (e) {
-      rethrow;
-    }
+  // Register with email, password, and name
+  Future<UserData> signUp(String email, String password, String name) async {
+    final db = await _dbHelper.db;
+    final id = _generateId();
+    final user = UserData(
+      id: id,
+      email: email,
+      name: name,
+      photoUrl: null,
+    );
+    await db.insert('users', {
+      ...user.toMap(),
+      'password': password,
+    });
+    return user;
   }
 
-  // Sign in with Google
-  Future<UserCredential> signInWithGoogle() async {
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) throw Exception('Google sign in aborted');
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final userCredential = await _auth.signInWithCredential(credential);
-
-      // Create or update user profile
-      if (userCredential.user != null) {
-        await _userService.updateUserProfile(
-          userId: userCredential.user!.uid,
-          name: userCredential.user!.displayName ?? '',
-          email: userCredential.user!.email!,
-        );
-      }
-
-      return userCredential;
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
-    }
-  }
-
-  // Sign out
+  // Sign out (no-op for SQLite)
   Future<void> signOut() async {
-    try {
-      await _auth.signOut();
-    } catch (e) {
-      rethrow;
-    }
+    // No persistent session for SQLite
   }
 
-  // Reset password
+  // Reset password (not implemented for SQLite)
   Future<void> resetPassword(String email) async {
-    try {
-      await _auth.sendPasswordResetEmail(email: email);
-    } catch (e) {
-      rethrow;
-    }
+    // Implement as needed
   }
 
-  // Update password
-  Future<void> updatePassword(String newPassword) async {
-    try {
-      final user = _auth.currentUser;
-      if (user != null) {
-        await user.updatePassword(newPassword);
-      }
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
-    }
-  }
-
-  // Handle Firebase Auth exceptions
-  Exception _handleAuthException(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'user-not-found':
-        return Exception('No user found with this email.');
-      case 'wrong-password':
-        return Exception('Wrong password provided.');
-      case 'email-already-in-use':
-        return Exception('Email is already in use.');
-      case 'invalid-email':
-        return Exception('Email address is invalid.');
-      case 'weak-password':
-        return Exception('Password is too weak.');
-      case 'operation-not-allowed':
-        return Exception('Operation not allowed.');
-      case 'user-disabled':
-        return Exception('User has been disabled.');
-      default:
-        return Exception(e.message ?? 'An error occurred.');
-    }
+  // Helper to generate a random user ID
+  String _generateId() {
+    final rand = Random();
+    return List.generate(16, (_) => rand.nextInt(10)).join();
   }
 }

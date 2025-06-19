@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'providers/app_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/book_provider.dart';
@@ -33,22 +31,11 @@ import 'services/book_service.dart';
 import 'services/cart_service.dart';
 import 'services/order_service.dart';
 import 'services/user_service.dart';
-import 'firebase_options/firebase_options.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    debugPrint('Firebase initialized successfully');
-    runApp(const MyApp());
-  } catch (e) {
-    debugPrint('Error initializing Firebase: $e');
-    runApp(const FirebaseInitErrorApp());
-  }
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -56,7 +43,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firestoreInstance = firestore.FirebaseFirestore.instance;
     final authService = AuthService();
     final userService = UserService();
     final cartService = CartService();
@@ -72,7 +58,6 @@ class MyApp extends StatelessWidget {
             cartService: cartService,
             orderService: orderService,
             userService: userService,
-            firestore: firestoreInstance,
           ),
         ),
         ChangeNotifierProvider(
@@ -137,26 +122,6 @@ class MyApp extends StatelessWidget {
           }
           return null;
         },
-      ),
-    );
-  }
-}
-
-class FirebaseInitErrorApp extends StatelessWidget {
-  const FirebaseInitErrorApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: Center(
-          child: Text(
-            'Error initializing Firebase.\nPlease check your configuration.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18, color: Colors.red),
-          ),
-        ),
       ),
     );
   }

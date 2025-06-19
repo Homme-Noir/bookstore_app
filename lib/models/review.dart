@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 
 class Review {
   final String id;
@@ -25,22 +25,6 @@ class Review {
     this.likedBy = const [],
   });
 
-  factory Review.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return Review(
-      id: doc.id,
-      bookId: data['bookId'] ?? '',
-      userId: data['userId'] ?? '',
-      userName: data['userName'] ?? '',
-      userImage: data['userImage'] ?? '',
-      comment: data['comment'] ?? '',
-      rating: (data['rating'] ?? 0.0).toDouble(),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      likes: data['likes'] ?? 0,
-      likedBy: List<String>.from(data['likedBy'] ?? []),
-    );
-  }
-
   Map<String, dynamic> toMap() {
     return {
       'bookId': bookId,
@@ -49,9 +33,26 @@ class Review {
       'userImage': userImage,
       'comment': comment,
       'rating': rating,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt.toIso8601String(),
       'likes': likes,
       'likedBy': likedBy,
     };
   }
-} 
+
+  static Review fromMap(Map<String, dynamic> map) {
+    return Review(
+      id: map['id'] as String,
+      bookId: map['bookId'] as String,
+      userId: map['userId'] as String,
+      userName: map['userName'] as String,
+      userImage: map['userImage'] as String,
+      comment: map['comment'] as String,
+      rating: (map['rating'] as num).toDouble(),
+      createdAt: DateTime.parse(map['createdAt'] as String),
+      likes: map['likes'] as int? ?? 0,
+      likedBy: map['likedBy'] != null
+          ? List<String>.from(jsonDecode(map['likedBy'] as String))
+          : [],
+    );
+  }
+}

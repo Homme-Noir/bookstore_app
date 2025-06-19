@@ -7,25 +7,30 @@ class CartProvider with ChangeNotifier {
   List<CartItem> _items = [];
   bool _isLoading = false;
   String? _error;
+  String? _userId;
 
   CartProvider({
     required CartService cartService,
-  }) : _cartService = cartService {
-    loadCart();
+    String? userId,
+  })  : _cartService = cartService,
+        _userId = userId {
+    if (_userId != null) {
+      loadCart(_userId!);
+    }
   }
 
   List<CartItem> get items => _items;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  double get total => _items.fold(0, (sum, item) => sum + (item.price * item.quantity));
+  double get total =>
+      _items.fold(0, (sum, item) => sum + (item.price * item.quantity));
 
-  Future<void> loadCart() async {
+  Future<void> loadCart(String userId) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
-
-      _items = await _cartService.getCartItems();
+      _items = await _cartService.getCartItems(userId);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -34,14 +39,13 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  Future<void> addToCart(String bookId, int quantity) async {
+  Future<void> addToCart(String userId, CartItem item) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
-
-      await _cartService.addToCart(bookId, quantity);
-      await loadCart();
+      await _cartService.addToCart(userId, item);
+      await loadCart(userId);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -50,14 +54,14 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateQuantity(String bookId, int quantity) async {
+  Future<void> updateQuantity(
+      String userId, String bookId, int quantity) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
-
-      await _cartService.updateQuantity(bookId, quantity);
-      await loadCart();
+      await _cartService.updateQuantity(userId, bookId, quantity);
+      await loadCart(userId);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -66,14 +70,13 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  Future<void> removeFromCart(String bookId) async {
+  Future<void> removeFromCart(String userId, String bookId) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
-
-      await _cartService.removeFromCart(bookId);
-      await loadCart();
+      await _cartService.removeFromCart(userId, bookId);
+      await loadCart(userId);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -82,13 +85,12 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  Future<void> clearCart() async {
+  Future<void> clearCart(String userId) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
-
-      await _cartService.clearCart();
+      await _cartService.clearCart(userId);
       _items = [];
     } catch (e) {
       _error = e.toString();
@@ -102,4 +104,4 @@ class CartProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
   }
-} 
+}

@@ -1,6 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'address.dart';
 import 'book.dart';
+import 'dart:convert';
 
 // Add OrderStatus enum
 enum OrderStatus { pending, processing, shipped, delivered, cancelled }
@@ -108,34 +108,6 @@ class Order {
     );
   }
 
-  factory Order.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return Order(
-      id: doc.id,
-      userId: data['userId'] as String,
-      items: (data['items'] as List)
-          .map((item) => OrderItem.fromMap(item as Map<String, dynamic>))
-          .toList(),
-      totalAmount: (data['totalAmount'] as num).toDouble(),
-      shippingAddress: ShippingAddress.fromJson(
-        data['shippingAddress'] as Map<String, dynamic>,
-      ),
-      status: OrderStatus.values.firstWhere(
-        (e) => e.toString().split('.').last == data['status'],
-        orElse: () => OrderStatus.pending,
-      ),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: data['updatedAt'] != null
-          ? (data['updatedAt'] as Timestamp).toDate()
-          : null,
-      paymentId: data['paymentId'] as String?,
-      trackingNumber: data['trackingNumber'] as String?,
-      paymentMethod: data['paymentMethod'] as String?,
-      shippingCost: (data['shippingCost'] as num?)?.toDouble(),
-      tax: (data['tax'] as num?)?.toDouble(),
-    );
-  }
-
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
@@ -143,8 +115,8 @@ class Order {
       'totalAmount': totalAmount,
       'shippingAddress': shippingAddress.toJson(),
       'status': status.toString().split('.').last,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
       'paymentId': paymentId,
       'trackingNumber': trackingNumber,
       'paymentMethod': paymentMethod,
@@ -156,4 +128,32 @@ class Order {
   // Computed getters for UI compatibility
   double get subtotal => totalAmount - (shippingCost ?? 0) - (tax ?? 0);
   double get total => totalAmount;
+
+  static Order fromMap(Map<String, dynamic> map) {
+    return Order(
+      id: map['id'] as String,
+      userId: map['userId'] as String,
+      items: (map['items'] as String) == null
+          ? []
+          : (List<Map<String, dynamic>>.from(jsonDecode(map['items'] as String))
+              .map((e) => OrderItem.fromMap(e))
+              .toList()),
+      totalAmount: (map['totalAmount'] as num).toDouble(),
+      shippingAddress: ShippingAddress.fromJson(
+          jsonDecode(map['shippingAddress'] as String)),
+      status: OrderStatus.values.firstWhere(
+          (e) => e.toString().split('.').last == map['status'],
+          orElse: () => OrderStatus.pending),
+      createdAt:
+          DateTime.tryParse(map['createdAt'] as String) ?? DateTime.now(),
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.tryParse(map['updatedAt'] as String)
+          : null,
+      paymentId: map['paymentId'] as String?,
+      trackingNumber: map['trackingNumber'] as String?,
+      paymentMethod: map['paymentMethod'] as String?,
+      shippingCost: (map['shippingCost'] as num?)?.toDouble(),
+      tax: (map['tax'] as num?)?.toDouble(),
+    );
+  }
 }

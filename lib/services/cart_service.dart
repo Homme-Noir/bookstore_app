@@ -1,91 +1,44 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'db_helper.dart';
 import '../models/cart_item.dart';
 import '../models/book.dart';
+import 'package:sqflite/sqflite.dart';
 
 class CartService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final DBHelper _dbHelper = DBHelper();
 
-  String _getCurrentUserId() {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw Exception('User not authenticated');
-    }
-    return user.uid;
+  Future<List<CartItem>> getCartItems(String userId) async {
+    final db = await _dbHelper.db;
+    final result =
+        await db.query('cart', where: 'userId = ?', whereArgs: [userId]);
+    return result.map((e) => CartItem.fromMap(e)).toList();
   }
 
-  Future<List<CartItem>> getCartItems() async {
-    final snapshot = await _firestore
-        .collection('users')
-        .doc(_getCurrentUserId())
-        .collection('cart')
-        .get();
-    return snapshot.docs.map((doc) => CartItem.fromMap(doc.data())).toList();
+  Future<void> addToCart(String userId, CartItem item) async {
+    final db = await _dbHelper.db;
+    await db.insert(
+        'cart',
+        {
+          ...item.toMap(),
+          'userId': userId,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  Stream<List<CartItem>> getCartStream() {
-    return _firestore
-        .collection('users')
-        .doc(_getCurrentUserId())
-        .collection('cart')
-        .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => CartItem.fromMap(doc.data())).toList());
+  Future<void> updateQuantity(
+      String userId, String bookId, int quantity) async {
+    final db = await _dbHelper.db;
+    await db.update('cart', {'quantity': quantity},
+        where: 'userId = ? AND bookId = ?', whereArgs: [userId, bookId]);
   }
 
-  Future<void> addToCart(String bookId, int quantity) async {
-    final book = await _getBook(bookId);
-    final cartItem = CartItem(
-      bookId: book.id,
-      title: book.title,
-      coverImage: book.coverImage,
-      price: book.price,
-      quantity: quantity,
-    );
-
-    await _firestore
-        .collection('users')
-        .doc(_getCurrentUserId())
-        .collection('cart')
-        .doc(bookId)
-        .set(cartItem.toMap());
+  Future<void> removeFromCart(String userId, String bookId) async {
+    final db = await _dbHelper.db;
+    await db.delete('cart',
+        where: 'userId = ? AND bookId = ?', whereArgs: [userId, bookId]);
   }
 
-  Future<void> updateQuantity(String bookId, int quantity) async {
-    await _firestore
-        .collection('users')
-        .doc(_getCurrentUserId())
-        .collection('cart')
-        .doc(bookId)
-        .update({'quantity': quantity});
-  }
-
-  Future<void> removeFromCart(String bookId) async {
-    await _firestore
-        .collection('users')
-        .doc(_getCurrentUserId())
-        .collection('cart')
-        .doc(bookId)
-        .delete();
-  }
-
-  Future<void> clearCart() async {
-    final cartRef = _firestore
-        .collection('users')
-        .doc(_getCurrentUserId())
-        .collection('cart');
-    final snapshot = await cartRef.get();
-    for (var doc in snapshot.docs) {
-      await doc.reference.delete();
-    }
-  }
-
-  Future<Book> _getBook(String bookId) async {
-    final doc = await _firestore.collection('books').doc(bookId).get();
-    if (!doc.exists) {
-      throw Exception('Book not found');
-    }
-    return Book.fromFirestore(doc);
+  Future<void> clearCart(String userId) async {
+    final db = await _dbHelper.db;
+    await db.delete('cart', where: 'userId = ?', whereArgs: [userId]);
   }
 }

@@ -1,79 +1,33 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'db_helper.dart';
 import '../models/book.dart';
+import 'package:sqflite/sqflite.dart';
 
 class WishlistService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _collection = 'wishlists';
+  final DBHelper _dbHelper = DBHelper();
 
-  // Get user's wishlist
-  Stream<List<Book>> getUserWishlist(String userId) {
-    return _firestore
-        .collection(_collection)
-        .doc(userId)
-        .collection('items')
-        .snapshots()
-        .asyncMap((snapshot) async {
-      final bookIds = snapshot.docs.map((doc) => doc.id).toList();
-      if (bookIds.isEmpty) return [];
-
-      final booksSnapshot = await _firestore
-          .collection('books')
-          .where(FieldPath.documentId, whereIn: bookIds)
-          .get();
-
-      return booksSnapshot.docs.map((doc) => Book.fromFirestore(doc)).toList();
-    });
+  Future<List<String>> getWishlistBookIds(String userId) async {
+    final db = await _dbHelper.db;
+    final result =
+        await db.query('wishlist', where: 'userId = ?', whereArgs: [userId]);
+    return result.map((e) => e['bookId'] as String).toList();
   }
 
-  // Add book to wishlist
-  Future<void> addToWishlist(String userId, String bookId) {
-    return _firestore
-        .collection(_collection)
-        .doc(userId)
-        .collection('items')
-        .doc(bookId)
-        .set({
-      'addedAt': FieldValue.serverTimestamp(),
-    });
+  Future<void> addToWishlist(String userId, String bookId) async {
+    final db = await _dbHelper.db;
+    await db.insert('wishlist', {'userId': userId, 'bookId': bookId},
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  // Remove book from wishlist
-  Future<void> removeFromWishlist(String userId, String bookId) {
-    return _firestore
-        .collection(_collection)
-        .doc(userId)
-        .collection('items')
-        .doc(bookId)
-        .delete();
+  Future<void> removeFromWishlist(String userId, String bookId) async {
+    final db = await _dbHelper.db;
+    await db.delete('wishlist',
+        where: 'userId = ? AND bookId = ?', whereArgs: [userId, bookId]);
   }
 
-  // Check if book is in wishlist
-  Future<bool> isInWishlist(String userId, String bookId) async {
-    final doc = await _firestore
-        .collection(_collection)
-        .doc(userId)
-        .collection('items')
-        .doc(bookId)
-        .get();
-    return doc.exists;
-  }
-
-  // Get user's wishlist as a Future
   Future<List<Book>> getWishlist(String userId) async {
-    final snapshot = await _firestore
-        .collection(_collection)
-        .doc(userId)
-        .collection('items')
-        .get();
-
-    final bookIds = snapshot.docs.map((doc) => doc.id).toList();
-    if (bookIds.isEmpty) return [];
-
-    final booksSnapshot = await _firestore
-        .collection('books')
-        .where(FieldPath.documentId, whereIn: bookIds)
-        .get();
-
-    return booksSnapshot.docs.map((doc) => Book.fromFirestore(doc)).toList();
+    final bookIds = await getWishlistBookIds(userId);
+    // You may want to fetch books from BookService using these IDs
+    // For now, just return empty list or implement as needed
+    return [];
   }
-} 
+}

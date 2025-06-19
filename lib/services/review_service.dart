@@ -1,93 +1,78 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+import 'db_helper.dart';
 import '../models/review.dart';
 
 class ReviewService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _collection = 'reviews';
+  final DBHelper _dbHelper = DBHelper();
 
-  // Get reviews for a book
-  Stream<List<Review>> getBookReviews(String bookId) {
-    return _firestore
-        .collection(_collection)
-        .where('bookId', isEqualTo: bookId)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) => Review.fromFirestore(doc)).toList();
-    });
+  Future<List<Review>> getBookReviews(String bookId) async {
+    final db = await _dbHelper.db;
+    final result =
+        await db.query('reviews', where: 'bookId = ?', whereArgs: [bookId]);
+    return result.map((e) => Review.fromMap(e)).toList();
   }
 
-  // Add a review
   Future<void> addReview(Review review) async {
-    // Add the review
-    await _firestore.collection(_collection).add(review.toMap());
-
-    // Update book rating
-    final bookReviews = await _firestore
-        .collection(_collection)
-        .where('bookId', isEqualTo: review.bookId)
-        .get();
-
-    final totalRating = bookReviews.docs.fold<double>(
-      0,
-      (previousValue, doc) =>
-          previousValue + (doc.data()['rating'] as num).toDouble(),
-    );
-    final averageRating = totalRating / bookReviews.docs.length;
-
-    await _firestore.collection('books').doc(review.bookId).update({
-      'rating': averageRating,
-      'reviewCount': bookReviews.docs.length,
-    });
+    final db = await _dbHelper.db;
+    await db.insert('reviews', review.toMap());
   }
 
-  // Like a review
   Future<void> likeReview(String reviewId, String userId) async {
-    final reviewRef = _firestore.collection(_collection).doc(reviewId);
-    final reviewDoc = await reviewRef.get();
-    final review = Review.fromFirestore(reviewDoc);
-
-    if (review.likedBy.contains(userId)) {
-      // Unlike
-      await reviewRef.update({
-        'likes': FieldValue.increment(-1),
-        'likedBy': FieldValue.arrayRemove([userId]),
-      });
-    } else {
-      // Like
-      await reviewRef.update({
-        'likes': FieldValue.increment(1),
-        'likedBy': FieldValue.arrayUnion([userId]),
-      });
+    final db = await _dbHelper.db;
+    final result =
+        await db.query('reviews', where: 'id = ?', whereArgs: [reviewId]);
+    if (result.isNotEmpty) {
+      final review = Review.fromMap(result.first);
+      final likedBy = List<String>.from(json.decode(review.likedBy ?? '[]'));
+      if (likedBy.contains(userId)) {
+        likedBy.remove(userId);
+      } else {
+        likedBy.add(userId);
+      }
+      await db.update(
+          'reviews',
+          {
+            'likes': likedBy.length,
+            'likedBy': json.encode(likedBy),
+          },
+          where: 'id = ?',
+          whereArgs: [reviewId]);
     }
   }
 
   // Delete a review
   Future<void> deleteReview(String reviewId, String bookId) async {
-    await _firestore.collection(_collection).doc(reviewId).delete();
+    final db = await _dbHelper.db;
+    await db.delete('reviews', where: 'id = ?', whereArgs: [reviewId]);
 
     // Update book rating
-    final bookReviews = await _firestore
-        .collection(_collection)
-        .where('bookId', isEqualTo: bookId)
-        .get();
+    final bookReviews =
+        await db.query('reviews', where: 'bookId = ?', whereArgs: [bookId]);
 
-    if (bookReviews.docs.isEmpty) {
-      await _firestore.collection('books').doc(bookId).update({
-        'rating': 0.0,
-        'reviewCount': 0,
-      });
+    if (bookReviews.isEmpty) {
+      await db.update(
+          'books',
+          {
+            'rating': 0.0,
+            'reviewCount': 0,
+          },
+          where: 'id = ?',
+          whereArgs: [bookId]);
     } else {
-      final totalRating = bookReviews.docs.fold<double>(
+      final totalRating = bookReviews.fold<double>(
         0,
-        (previous, doc) => previous + (doc.data()['rating'] as num).toDouble(),
+        (previous, doc) => previous + (doc['rating'] as num).toDouble(),
       );
-      final averageRating = totalRating / bookReviews.docs.length;
+      final averageRating = totalRating / bookReviews.length;
 
-      await _firestore.collection('books').doc(bookId).update({
-        'rating': averageRating,
-        'reviewCount': bookReviews.docs.length,
-      });
+      await db.update(
+          'books',
+          {
+            'rating': averageRating,
+            'reviewCount': bookReviews.length,
+          },
+          where: 'id = ?',
+          whereArgs: [bookId]);
     }
   }
 }

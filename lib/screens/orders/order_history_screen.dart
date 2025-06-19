@@ -13,22 +13,9 @@ class OrderHistoryScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Order History'),
       ),
-      body: StreamBuilder<List<Order>>(
-        stream: context.read<AppProvider>().getUserOrdersStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
-          }
-
-          final orders = snapshot.data ?? [];
-
-          if (orders.isEmpty) {
+      body: Consumer<AppProvider>(
+        builder: (context, provider, child) {
+          if (provider.orders.isEmpty) {
             return const Center(
               child: Text('No orders found'),
             );
@@ -36,9 +23,9 @@ class OrderHistoryScreen extends StatelessWidget {
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: orders.length,
+            itemCount: provider.orders.length,
             itemBuilder: (context, index) {
-              final order = orders[index];
+              final order = provider.orders[index];
               return Card(
                 margin: const EdgeInsets.only(bottom: 16),
                 child: ListTile(

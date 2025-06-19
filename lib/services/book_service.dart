@@ -1,11 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/widgets.dart';
+import 'package:sqflite/sqflite.dart';
+import 'db_helper.dart';
 import '../models/book.dart';
 
 /// A service class that manages all Firestore operations related to books.
 class BookService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _collection = 'books';
+  final DBHelper _dbHelper = DBHelper();
 
   // ---------------------------------------------------------------------------
   // READ OPERATIONS
@@ -13,74 +12,51 @@ class BookService {
 
   /// Stream of all books in the collection.
   Stream<List<Book>> getBooksStream() {
-    return _firestore
-        .collection(_collection)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map(Book.fromFirestore).toList());
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// Fetches all books once.
   Future<List<Book>> getBooks() async {
-    final snapshot = await _firestore.collection(_collection).get();
-    return snapshot.docs.map(Book.fromFirestore).toList();
+    final db = await _dbHelper.db;
+    final result = await db.query('books');
+    return result.map((e) => Book.fromMap(e)).toList();
   }
 
   /// Fetches featured books.
   Future<List<Book>> getFeaturedBooks() async {
-    final snapshot = await _firestore
-        .collection(_collection)
-        .where('isFeatured', isEqualTo: true)
-        .get();
-    return snapshot.docs.map(Book.fromFirestore).toList();
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// Fetches new releases.
   Future<List<Book>> getNewReleases() async {
-    final snapshot = await _firestore
-        .collection(_collection)
-        .where('isNewArrival', isEqualTo: true)
-        .orderBy('releaseDate', descending: true)
-        .get();
-    return snapshot.docs.map(Book.fromFirestore).toList();
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// Fetches bestsellers.
   Future<List<Book>> getBestsellers() async {
-    final snapshot = await _firestore
-        .collection(_collection)
-        .where('isBestseller', isEqualTo: true)
-        .orderBy('rating', descending: true)
-        .get();
-    return snapshot.docs.map(Book.fromFirestore).toList();
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// Fetches books by category.
   Future<List<Book>> getBooksByCategory(String category) async {
-    final snapshot = await _firestore
-        .collection(_collection)
-        .where('genres', arrayContains: category)
-        .get();
-    return snapshot.docs.map(Book.fromFirestore).toList();
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// Stream of bestseller books sorted by rating.
   Stream<List<Book>> getBestsellersStream() {
-    return _firestore
-        .collection(_collection)
-        .where('isBestseller', isEqualTo: true)
-        .orderBy('rating', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map(Book.fromFirestore).toList());
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// Stream of new arrivals sorted by release date.
   Stream<List<Book>> getNewArrivalsStream() {
-    return _firestore
-        .collection(_collection)
-        .where('isNewArrival', isEqualTo: true)
-        .orderBy('releaseDate', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map(Book.fromFirestore).toList());
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// Returns a filtered stream of books based on category and sort option.
@@ -89,17 +65,8 @@ class BookService {
     String sort = 'Newest',
     int pageSize = 10,
   }) {
-    Query query = _firestore.collection(_collection);
-
-    if (category != null && category.isNotEmpty) {
-      query = query.where('genres', arrayContains: category);
-    }
-
-    query = _applySorting(query, sort).limit(pageSize);
-
-    return query.snapshots().map(
-          (snapshot) => snapshot.docs.map(Book.fromFirestore).toList(),
-        );
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// Stream of filtered bestseller books.
@@ -108,19 +75,8 @@ class BookService {
     String sort = 'Newest',
     int pageSize = 10,
   }) {
-    Query query = _firestore
-        .collection(_collection)
-        .where('isBestseller', isEqualTo: true);
-
-    if (category != null && category.isNotEmpty) {
-      query = query.where('genres', arrayContains: category);
-    }
-
-    query = _applySorting(query, sort).limit(pageSize);
-
-    return query.snapshots().map(
-          (snapshot) => snapshot.docs.map(Book.fromFirestore).toList(),
-        );
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// Stream of filtered new arrival books.
@@ -129,69 +85,53 @@ class BookService {
     String sort = 'Newest',
     int pageSize = 10,
   }) {
-    Query query = _firestore
-        .collection(_collection)
-        .where('isNewArrival', isEqualTo: true);
-
-    if (category != null && category.isNotEmpty) {
-      query = query.where('genres', arrayContains: category);
-    }
-
-    query = _applySorting(query, sort).limit(pageSize);
-
-    return query.snapshots().map(
-          (snapshot) => snapshot.docs.map(Book.fromFirestore).toList(),
-        );
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// Stream of books by genre.
   Stream<List<Book>> getBooksByGenre(String genre) {
-    return _firestore
-        .collection(_collection)
-        .where('genres', arrayContains: genre)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map(Book.fromFirestore).toList());
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// Stream of books by author.
   Stream<List<Book>> getBooksByAuthor(String author) {
-    return _firestore
-        .collection(_collection)
-        .where('author', isEqualTo: author)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map(Book.fromFirestore).toList());
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// Stream search for books by title.
   Stream<List<Book>> searchBooksStream(String query) {
-    return _firestore
-        .collection(_collection)
-        .where('title', isGreaterThanOrEqualTo: query)
-        .where('title', isLessThanOrEqualTo: '$query\uf8ff')
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map(Book.fromFirestore).toList());
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// One-time search for books by title.
   Future<List<Book>> searchBooks(String query) async {
-    final snapshot = await _firestore
-        .collection(_collection)
-        .where('title', isGreaterThanOrEqualTo: query)
-        .where('title', isLessThanOrEqualTo: '$query\uf8ff')
-        .get();
-    return snapshot.docs.map(Book.fromFirestore).toList();
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// Fetch a single book by its ID.
-  Future<Book> getBook(String id) async {
-    final doc = await _firestore.collection(_collection).doc(id).get();
-    return Book.fromFirestore(doc);
+  Future<Book?> getBook(String id) async {
+    final db = await _dbHelper.db;
+    final result = await db.query('books', where: 'id = ?', whereArgs: [id]);
+    if (result.isNotEmpty) {
+      return Book.fromMap(result.first);
+    }
+    return null;
   }
 
   /// Fetch all book categories.
   Future<List<String>> getCategories() async {
-    final snapshot = await _firestore.collection('categories').get();
-    return snapshot.docs.map((doc) => doc['name'] as String).toList();
+    final db = await _dbHelper.db;
+    final result = await db.query('books', columns: ['genres']);
+    final genres = result
+        .expand((row) => (row['genres'] as String).split(','))
+        .toSet()
+        .toList();
+    return genres;
   }
 
   // ---------------------------------------------------------------------------
@@ -200,100 +140,39 @@ class BookService {
 
   /// Add a new book to Firestore.
   Future<void> addBook(Book book) async {
-    try {
-      // Generate a unique ID if not provided
-      final bookId = book.id.isEmpty
-          ? _firestore.collection(_collection).doc().id
-          : book.id;
-
-      // Create a new book with the generated ID
-      final bookWithId = Book(
-        id: bookId,
-        title: book.title,
-        author: book.author,
-        description: book.description,
-        coverImage: book.coverImage,
-        price: book.price,
-        genres: book.genres,
-        stock: book.stock,
-        rating: book.rating,
-        reviewCount: book.reviewCount,
-        releaseDate: book.releaseDate,
-        isBestseller: book.isBestseller,
-        isNewArrival: book.isNewArrival,
-        isbn: book.isbn,
-        pageCount: book.pageCount,
-        status: book.status,
-        authors: book.authors,
-        categories: book.categories,
-      );
-
-      await _firestore
-          .collection(_collection)
-          .doc(bookId)
-          .set(bookWithId.toMap());
-    } catch (e) {
-      debugPrint('Error adding book: $e');
-      rethrow;
-    }
+    final db = await _dbHelper.db;
+    await db.insert('books', book.toMap());
   }
 
   /// Update an existing book in Firestore.
   Future<void> updateBook(Book book) async {
-    try {
-      await _firestore
-          .collection(_collection)
-          .doc(book.id)
-          .update(book.toMap());
-    } catch (e) {
-      debugPrint('Error updating book: $e');
-      rethrow;
-    }
+    final db = await _dbHelper.db;
+    await db
+        .update('books', book.toMap(), where: 'id = ?', whereArgs: [book.id]);
   }
 
   /// Delete a book from Firestore.
   Future<void> deleteBook(String id) async {
-    try {
-      await _firestore.collection(_collection).doc(id).delete();
-    } catch (e) {
-      debugPrint('Error deleting book: $e');
-      rethrow;
-    }
+    final db = await _dbHelper.db;
+    await db.delete('books', where: 'id = ?', whereArgs: [id]);
   }
 
   /// Adds a new category.
   Future<void> addCategory(String category) async {
-    await _firestore.collection('categories').add({
-      'name': category,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// Updates an existing category.
   Future<void> updateCategory(String oldCategory, String newCategory) async {
-    final snapshot = await _firestore
-        .collection('categories')
-        .where('name', isEqualTo: oldCategory)
-        .get();
-
-    if (snapshot.docs.isNotEmpty) {
-      await snapshot.docs.first.reference.update({
-        'name': newCategory,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    }
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   /// Deletes a category.
   Future<void> deleteCategory(String category) async {
-    final snapshot = await _firestore
-        .collection('categories')
-        .where('name', isEqualTo: category)
-        .get();
-
-    if (snapshot.docs.isNotEmpty) {
-      await snapshot.docs.first.reference.delete();
-    }
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 
   // ---------------------------------------------------------------------------
@@ -302,16 +181,7 @@ class BookService {
 
   /// Applies a sort option to a Firestore query.
   Query _applySorting(Query query, String sort) {
-    switch (sort) {
-      case 'Price: Low to High':
-        return query.orderBy('price');
-      case 'Price: High to Low':
-        return query.orderBy('price', descending: true);
-      case 'Rating':
-        return query.orderBy('rating', descending: true);
-      case 'Newest':
-      default:
-        return query.orderBy('releaseDate', descending: true);
-    }
+    // This method is not available in the new implementation
+    throw UnimplementedError();
   }
 }
