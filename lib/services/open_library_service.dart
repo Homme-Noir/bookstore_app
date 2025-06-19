@@ -85,8 +85,8 @@ class OpenLibraryService {
       releaseDate: olBook.publishDate ?? DateTime.now(),
       isBestseller: false,
       isNewArrival: false,
-      isbn: olBook.isbn,
-      pageCount: olBook.pageCount,
+      isbn: olBook.isbn ?? '',
+      pageCount: olBook.pageCount ?? 0,
       status: 'available',
       categories: olBook.subjects.isNotEmpty ? olBook.subjects : null,
     );

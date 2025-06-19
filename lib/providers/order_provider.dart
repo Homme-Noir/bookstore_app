@@ -13,7 +13,7 @@ class OrderProvider with ChangeNotifier {
   OrderProvider({
     required OrderService orderService,
   }) : _orderService = orderService {
-    loadOrders();
+    loadOrders("");
   }
 
   List<Order> get orders => _orders;
@@ -21,29 +21,13 @@ class OrderProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  Future<void> loadOrders() async {
+  Future<void> loadOrders(String userId) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      _orders = await _orderService.getOrders();
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> placeOrder(Order order) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      await _orderService.placeOrder(order);
-      await loadOrders();
+      _orders = await _orderService.getUserOrders(userId).first;
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -69,6 +53,7 @@ class OrderProvider with ChangeNotifier {
         shippingAddress: shippingAddress,
         total: total,
       );
+      await loadOrders(userId);
     } catch (e) {
       _error = e.toString();
       notifyListeners();
@@ -84,7 +69,15 @@ class OrderProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      _selectedOrder = await _orderService.getOrder(orderId);
+      final allOrders = await _orderService.getAllOrdersFuture();
+      Order? found;
+      for (final o in allOrders) {
+        if (o.id == orderId) {
+          found = o;
+          break;
+        }
+      }
+      _selectedOrder = found;
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -100,7 +93,7 @@ class OrderProvider with ChangeNotifier {
       notifyListeners();
 
       await _orderService.updateOrderStatus(orderId, status);
-      await loadOrders();
+      await loadOrders("");
     } catch (e) {
       _error = e.toString();
     } finally {

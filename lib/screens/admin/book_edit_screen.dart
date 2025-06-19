@@ -38,9 +38,9 @@ class _BookEditScreenState extends State<BookEditScreen> {
       _descriptionController.text = widget.book!.description;
       _priceController.text = widget.book!.price.toString();
       _coverImageController.text = widget.book!.coverImage;
-      _isbnController.text = widget.book!.isbn ?? '';
+      _isbnController.text = widget.book!.isbn;
       _stockController.text = widget.book!.stock.toString();
-      _pageCountController.text = widget.book!.pageCount?.toString() ?? '';
+      _pageCountController.text = widget.book!.pageCount.toString();
       _selectedCategory = widget.book!.genres.isNotEmpty
           ? widget.book!.genres.first
           : 'Fiction';
@@ -77,8 +77,8 @@ class _BookEditScreenState extends State<BookEditScreen> {
         _authorController.text = selectedBook.author;
         _descriptionController.text = selectedBook.description;
         _coverImageController.text = selectedBook.coverImage;
-        _isbnController.text = selectedBook.isbn ?? '';
-        _pageCountController.text = selectedBook.pageCount?.toString() ?? '';
+        _isbnController.text = selectedBook.isbn;
+        _pageCountController.text = selectedBook.pageCount.toString();
 
         // Set category if available
         if (selectedBook.genres.isNotEmpty) {
@@ -120,10 +120,10 @@ class _BookEditScreenState extends State<BookEditScreen> {
         reviewCount: widget.book?.reviewCount ?? 0,
         isBestseller: _isBestseller,
         isNewArrival: _isNewArrival,
-        isbn: _isbnController.text.isNotEmpty ? _isbnController.text : null,
+        isbn: _isbnController.text.isNotEmpty ? _isbnController.text : '',
         pageCount: _pageCountController.text.isNotEmpty
             ? int.parse(_pageCountController.text)
-            : null,
+            : 0,
         status: 'available',
       );
 

@@ -28,11 +28,11 @@ import 'screens/auth/forgot_password_screen.dart';
 import 'screens/store/cart.dart';
 import 'screens/store/checkout_screen.dart';
 import 'screens/store/order_success_screen.dart';
+import 'screens/auth/login_screen.dart';
 import 'services/auth_service.dart';
 import 'services/book_service.dart';
 import 'services/cart_service.dart';
 import 'services/order_service.dart';
-import 'services/user_service.dart';
 import 'firebase_options/firebase_options.dart';
 import 'theme/app_theme.dart';
 
@@ -58,7 +58,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final firestoreInstance = firestore.FirebaseFirestore.instance;
     final authService = AuthService();
-    final userService = UserService();
     final cartService = CartService();
     final bookService = BookService();
     final orderService = OrderService();
@@ -71,14 +70,12 @@ class MyApp extends StatelessWidget {
             bookService: bookService,
             cartService: cartService,
             orderService: orderService,
-            userService: userService,
             firestore: firestoreInstance,
           ),
         ),
         ChangeNotifierProvider(
           create: (_) => AuthProvider(
             authService: authService,
-            userService: userService,
           ),
         ),
         ChangeNotifierProvider(
@@ -92,7 +89,7 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => WishlistProvider()),
         ChangeNotifierProvider(
-          create: (_) => UserProvider(userService: userService),
+          create: (_) => UserProvider(),
         ),
       ],
       child: MaterialApp(
@@ -115,6 +112,7 @@ class MyApp extends StatelessWidget {
           '/cart': (context) => const CartScreen(),
           '/checkout': (context) => const CheckoutScreen(),
           '/order-success': (context) => const OrderSuccessScreen(),
+          '/login': (context) => const LoginScreen(),
         },
         onGenerateRoute: (settings) {
           if (settings.name == '/order-details') {

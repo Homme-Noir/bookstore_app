@@ -1,52 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../models/user_data.dart';
-import '../services/user_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService;
-  final UserService _userService;
-  User? _user;
+  String? _userId;
   UserData? _userData;
   bool _isLoading = false;
   String? _error;
 
   AuthProvider({
     required AuthService authService,
-    required UserService userService,
-  })  : _authService = authService,
-        _userService = userService {
+  }) : _authService = authService {
     _init();
   }
 
-  User? get user => _user;
+  String? get userId => _userId;
   UserData? get userData => _userData;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get isAuthenticated => _user != null;
+  bool get isAuthenticated => _userId != null;
 
   void _init() {
-    _authService.onAuthStateChanged.listen((User? user) {
-      _user = user;
-      if (user != null) {
-        _loadUserData();
+    _authService.onAuthStateChanged.listen((Map<String, String>? user) {
+      _userId = user?['uid'];
+      if (_userId != null) {
+        // _loadUserData(); // Remove or stub if not needed
       } else {
         _userData = null;
       }
       notifyListeners();
     });
-  }
-
-  Future<void> _loadUserData() async {
-    if (_user == null) return;
-    try {
-      _userData = await _userService.getUserData(_user!.uid);
-      notifyListeners();
-    } catch (e) {
-      _error = e.toString();
-      notifyListeners();
-    }
   }
 
   Future<void> signIn(String email, String password) async {
@@ -71,9 +55,7 @@ class AuthProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      final userCredential = await _authService.signUp(email, password);
-      await _userService
-          .createUserData(userData.copyWith(id: userCredential.user!.uid));
+      await _authService.signUp(email, password);
     } catch (e) {
       _error = e.toString();
       notifyListeners();
@@ -115,7 +97,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<UserCredential> registerWithEmailAndPassword(
+  Future<String> registerWithEmailAndPassword(
     String email,
     String password,
     String name,
@@ -125,16 +107,9 @@ class AuthProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      final userCredential = await _authService.signUp(email, password);
-      await _userService.createUserData(
-        UserData(
-          id: userCredential.user!.uid,
-          name: name,
-          email: email,
-        ),
-      );
-
-      return userCredential;
+      final user = await _authService.signUp(email, password);
+      _userId = user['uid'];
+      return _userId ?? '';
     } catch (e) {
       _error = e.toString();
       notifyListeners();

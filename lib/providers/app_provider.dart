@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../services/auth_service.dart';
-import '../services/user_service.dart';
 import '../services/cart_service.dart';
 import '../services/book_service.dart';
 import '../services/order_service.dart';
@@ -34,14 +30,11 @@ class AppProvider extends ChangeNotifier {
   /// The order service for managing orders.
   final OrderService _orderService;
 
-  /// The user service for managing user data.
-  final UserService _userService;
-
   /// The Firestore instance for accessing Firestore.
   final firestore.FirebaseFirestore _firestore;
 
   /// The current user of the application.
-  User? _user;
+  String? _userId;
 
   /// The list of categories available in the store.
   List<String> _categories = [];
@@ -62,7 +55,7 @@ class AppProvider extends ChangeNotifier {
   final bool _isLoading = false;
 
   /// Returns whether the user is authenticated.
-  bool get isAuthenticated => _user != null;
+  bool get isAuthenticated => _userId != null;
 
   /// Returns whether the provider is currently loading data.
   bool get isLoading => _isLoading;
@@ -76,13 +69,11 @@ class AppProvider extends ChangeNotifier {
     required BookService bookService,
     required CartService cartService,
     required OrderService orderService,
-    required UserService userService,
     required firestore.FirebaseFirestore firestore,
   })  : _authService = authService,
         _bookService = bookService,
         _cartService = cartService,
         _orderService = orderService,
-        _userService = userService,
         _firestore = firestore {
     _init();
   }
@@ -96,8 +87,8 @@ class AppProvider extends ChangeNotifier {
   /// Initializes the provider by setting up listeners for user changes and loading initial data.
   Future<void> _init() async {
     _authService.onAuthStateChanged.listen((user) {
-      _user = user;
-      if (user != null) {
+      _userId = user?['uid'];
+      if (_userId != null) {
         _loadUserData();
       } else {
         _clearUserData();
@@ -111,12 +102,12 @@ class AppProvider extends ChangeNotifier {
 
   /// Loads user-specific data such as cart and orders.
   Future<void> _loadUserData() async {
-    if (_user == null) return;
+    if (_userId == null) return;
 
     _cartItems = await _cartService.getCartItems();
     notifyListeners();
 
-    _orderService.getUserOrders(_user!.uid).listen((orders) {
+    _orderService.getUserOrders(_userId!).listen((orders) {
       _orders = orders;
       notifyListeners();
     });
@@ -131,18 +122,19 @@ class AppProvider extends ChangeNotifier {
 
   /// Loads the list of categories from the book service.
   Future<void> _loadCategories() async {
-    _categories = await _bookService.getCategories();
+    // Use mock data for categories
+    _categories = ['Fiction', 'Classic', 'Fantasy', 'Romance', 'Adventure'];
     notifyListeners();
   }
 
   /// Loads the list of books from the book service.
-  Future<void> _loadBooks() async {
-    _books = await _bookService.getBooks();
+  void _loadBooks() {
+    _books = _bookService.getBooks();
     notifyListeners();
   }
 
   /// Returns the current user.
-  User? get user => _user;
+  String? get userId => _userId;
 
   /// Returns the list of categories.
   List<String> get categories => _categories;
@@ -170,31 +162,13 @@ class AppProvider extends ChangeNotifier {
   }
 
   /// Signs up a new user with the provided email and password.
-  Future<UserCredential> registerWithEmailAndPassword(
+  Future<String> registerWithEmailAndPassword(
     String email,
     String password,
     String name,
   ) async {
-    final userCredential = await _authService.signUp(email, password);
-    await _userService.createUserProfile(
-      userId: userCredential.user!.uid,
-      name: name,
-      email: email,
-    );
-    return userCredential;
-  }
-
-  /// Updates the user's profile with additional information.
-  Future<void> updateUserProfile({
-    String? address,
-    String? photoUrl,
-  }) async {
-    if (_user == null) return;
-    await _userService.updateUserProfile(
-      userId: _user!.uid,
-      address: address,
-      photoUrl: photoUrl,
-    );
+    final user = await _authService.signUp(email, password);
+    return user['uid'] ?? '';
   }
 
   /// Signs out the current user.
@@ -204,25 +178,25 @@ class AppProvider extends ChangeNotifier {
 
   /// Adds a book to the user's cart.
   Future<void> addToCart(Book book, int quantity) async {
-    if (_user == null) return;
+    if (_userId == null) return;
     await _cartService.addToCart(book.id, quantity);
   }
 
   /// Removes a book from the user's cart.
   Future<void> removeFromCart(String bookId) async {
-    if (_user == null) return;
+    if (_userId == null) return;
     await _cartService.removeFromCart(bookId);
   }
 
   /// Updates the quantity of a book in the user's cart.
   Future<void> updateCartItemQuantity(String bookId, int quantity) async {
-    if (_user == null) return;
+    if (_userId == null) return;
     await _cartService.updateQuantity(bookId, quantity);
   }
 
   /// Clears the user's cart.
   Future<void> clearCart() async {
-    if (_user == null) return;
+    if (_userId == null) return;
     await _cartService.clearCart();
   }
 
@@ -232,9 +206,9 @@ class AppProvider extends ChangeNotifier {
     required ShippingAddress address,
     required double total,
   }) async {
-    if (_user == null) return;
+    if (_userId == null) return;
     await _orderService.createOrder(
-      userId: _user!.uid,
+      userId: _userId!,
       items: items,
       shippingAddress: address,
       total: total,
@@ -260,37 +234,37 @@ class AppProvider extends ChangeNotifier {
 
   /// Returns a stream of orders made by the user.
   Stream<List<model.Order>> getUserOrdersStream() {
-    if (_user == null) return Stream.value([]);
-    return _orderService.getUserOrders(_user!.uid);
+    if (_userId == null) return Stream.value([]);
+    return _orderService.getUserOrders(_userId!);
   }
 
   /// Returns a stream of items in the user's cart.
   Stream<List<CartItem>> getCartStream() {
-    if (_user == null) return Stream.value([]);
+    if (_userId == null) return Stream.value([]);
     return _cartService.getCartStream();
   }
 
   /// Adds a new book to the store.
   Future<void> addBook(Book book) async {
     await _bookService.addBook(book);
-    await _loadBooks();
+    _loadBooks();
   }
 
   /// Updates an existing book in the store.
   Future<void> updateBook(Book book) async {
     await _bookService.updateBook(book);
-    await _loadBooks();
+    _loadBooks();
   }
 
   /// Deletes a book from the store.
   Future<void> deleteBook(String bookId) async {
     await _bookService.deleteBook(bookId);
-    await _loadBooks();
+    _loadBooks();
   }
 
   /// Gets all books from the store.
   Future<List<Book>> getAllBooks() async {
-    return await _bookService.getBooks();
+    return _bookService.getBooks();
   }
 
   /// Gets all categories from the store.
@@ -334,8 +308,9 @@ class AppProvider extends ChangeNotifier {
 
   /// Gets all categories from the store as a stream.
   Stream<List<String>> getAllCategoriesStream() {
-    return _firestore.collection('categories').snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => doc['name'] as String).toList());
+    // Return a stream of the mock categories
+    return Stream.value(
+        ['Fiction', 'Classic', 'Fantasy', 'Romance', 'Adventure']);
   }
 
   /// Gets all orders from the store as a stream.
@@ -345,28 +320,16 @@ class AppProvider extends ChangeNotifier {
 
   /// Returns a stream of books in the user's wishlist.
   Stream<List<Book>> getWishlistBooks() {
-    if (_user == null) return Stream.value([]);
-    return _firestore
-        .collection('users')
-        .doc(_user!.uid)
-        .collection('wishlist')
-        .snapshots()
-        .asyncMap((snapshot) async {
-      final bookIds = snapshot.docs.map((doc) => doc.id).toList();
-      if (bookIds.isEmpty) return [];
-      final books = await Future.wait(
-        bookIds.map((id) => _bookService.getBook(id)),
-      );
-      return books;
-    });
+    // Return an empty stream or implement a mock wishlist if needed
+    return Stream.value([]);
   }
 
   /// Checks if a book is in the user's wishlist.
   Future<bool> isInWishlist(String bookId) async {
-    if (_user == null) return false;
+    if (_userId == null) return false;
     final doc = await _firestore
         .collection('users')
-        .doc(_user!.uid)
+        .doc(_userId!)
         .collection('wishlist')
         .doc(bookId)
         .get();
@@ -375,10 +338,10 @@ class AppProvider extends ChangeNotifier {
 
   /// Adds a book to the user's wishlist.
   Future<void> addToWishlist(String bookId) async {
-    if (_user == null) return;
+    if (_userId == null) return;
     await _firestore
         .collection('users')
-        .doc(_user!.uid)
+        .doc(_userId!)
         .collection('wishlist')
         .doc(bookId)
         .set({'addedAt': firestore.FieldValue.serverTimestamp()});
@@ -386,10 +349,10 @@ class AppProvider extends ChangeNotifier {
 
   /// Removes a book from the user's wishlist.
   Future<void> removeFromWishlist(String bookId) async {
-    if (_user == null) return;
+    if (_userId == null) return;
     await _firestore
         .collection('users')
-        .doc(_user!.uid)
+        .doc(_userId!)
         .collection('wishlist')
         .doc(bookId)
         .delete();
@@ -413,10 +376,10 @@ class AppProvider extends ChangeNotifier {
 
   /// Adds a review to a book.
   Future<void> addReview(String bookId, String text, double rating) async {
-    if (_user == null) return;
+    if (_userId == null) return;
     await _firestore.collection('books').doc(bookId).collection('reviews').add({
-      'userId': _user!.uid,
-      'userName': _user!.displayName ?? 'Anonymous',
+      'userId': _userId!,
+      'userName': 'Anonymous',
       'text': text,
       'rating': rating,
       'timestamp': firestore.FieldValue.serverTimestamp(),
@@ -426,7 +389,7 @@ class AppProvider extends ChangeNotifier {
 
   /// Likes a review.
   Future<void> likeReview(String bookId, String reviewId) async {
-    if (_user == null) return;
+    if (_userId == null) return;
     final reviewRef = _firestore
         .collection('books')
         .doc(bookId)
@@ -437,14 +400,14 @@ class AppProvider extends ChangeNotifier {
     if (!review.exists) return;
 
     final likedBy = List<String>.from(review.data()?['likedBy'] ?? []);
-    if (likedBy.contains(_user!.uid)) {
-      likedBy.remove(_user!.uid);
+    if (likedBy.contains(_userId!)) {
+      likedBy.remove(_userId!);
       await reviewRef.update({
         'likes': firestore.FieldValue.increment(-1),
         'likedBy': likedBy,
       });
     } else {
-      likedBy.add(_user!.uid);
+      likedBy.add(_userId!);
       await reviewRef.update({
         'likes': firestore.FieldValue.increment(1),
         'likedBy': likedBy,
@@ -482,33 +445,5 @@ class AppProvider extends ChangeNotifier {
   }
 
   /// Creates a payment intent with Stripe for the given amount.
-  Future<Map<String, dynamic>> createPaymentIntent(double amount) async {
-    try {
-      // In a real app, this should be done on your backend server
-      // For demo purposes, we're using a test API key
-      const String stripeSecretKey = 'YOUR_STRIPE_SECRET_KEY';
-      const String stripeApiUrl = 'https://api.stripe.com/v1/payment_intents';
-
-      final response = await http.post(
-        Uri.parse(stripeApiUrl),
-        headers: {
-          'Authorization': 'Bearer $stripeSecretKey',
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: {
-          'amount': (amount * 100).toInt().toString(), // Convert to cents
-          'currency': 'usd',
-          'payment_method_types[]': 'card',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Failed to create payment intent: ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('Failed to create payment intent: $e');
-    }
-  }
+  // Stripe payment logic removed. No-op or mock logic can be added if needed.
 }

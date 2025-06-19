@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class Review {
   final String id;
   final String bookId;
@@ -25,22 +23,6 @@ class Review {
     this.likedBy = const [],
   });
 
-  factory Review.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return Review(
-      id: doc.id,
-      bookId: data['bookId'] ?? '',
-      userId: data['userId'] ?? '',
-      userName: data['userName'] ?? '',
-      userImage: data['userImage'] ?? '',
-      comment: data['comment'] ?? '',
-      rating: (data['rating'] ?? 0.0).toDouble(),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      likes: data['likes'] ?? 0,
-      likedBy: List<String>.from(data['likedBy'] ?? []),
-    );
-  }
-
   Map<String, dynamic> toMap() {
     return {
       'bookId': bookId,
@@ -49,9 +31,9 @@ class Review {
       'userImage': userImage,
       'comment': comment,
       'rating': rating,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt,
       'likes': likes,
       'likedBy': likedBy,
     };
   }
-} 
+}

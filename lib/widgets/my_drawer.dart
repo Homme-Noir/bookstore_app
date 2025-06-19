@@ -8,27 +8,23 @@ class MyDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appProvider = context.watch<AppProvider>();
-    final user = appProvider.user;
 
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          UserAccountsDrawerHeader(
-            accountName: Text(user?.displayName ?? 'Guest'),
-            accountEmail: Text(user?.email ?? ''),
+          const UserAccountsDrawerHeader(
+            accountName: Text('User'),
+            accountEmail: Text('user@example.com'),
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
               child: Text(
-                (user?.displayName ?? 'G')[0].toUpperCase(),
-                style: const TextStyle(
+                'U',
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
             ),
           ),
           ListTile(

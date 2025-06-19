@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class Book {
   final String id;
   final String title;
@@ -14,13 +12,13 @@ class Book {
   final DateTime releaseDate;
   final bool isBestseller;
   final bool isNewArrival;
-  final String? isbn;
-  final int? pageCount;
+  final String isbn;
+  final int pageCount;
   final String? status;
   final List<String>? authors;
   final List<String>? categories;
 
-  const Book({
+  Book({
     required this.id,
     required this.title,
     required this.author,
@@ -29,76 +27,43 @@ class Book {
     required this.price,
     required this.genres,
     required this.stock,
-    this.rating = 0.0,
-    this.reviewCount = 0,
+    required this.rating,
+    required this.reviewCount,
     required this.releaseDate,
-    this.isBestseller = false,
-    this.isNewArrival = false,
-    this.isbn,
-    this.pageCount,
+    required this.isBestseller,
+    required this.isNewArrival,
+    required this.isbn,
+    required this.pageCount,
     this.status,
     this.authors,
     this.categories,
   });
 
-  factory Book.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return Book(
-      id: doc.id,
-      title: data['title'] ?? '',
-      author: data['author'] ?? '',
-      description: data['description'] ?? '',
-      coverImage: data['coverImage'] ?? '',
-      price: (data['price'] ?? 0.0).toDouble(),
-      genres: List<String>.from(data['genres'] ?? []),
-      stock: data['stock'] ?? 0,
-      rating: (data['rating'] ?? 0.0).toDouble(),
-      reviewCount: data['reviewCount'] ?? 0,
-      releaseDate: (data['releaseDate'] as Timestamp).toDate(),
-      isBestseller: data['isBestseller'] ?? false,
-      isNewArrival: data['isNewArrival'] ?? false,
-      isbn: data['isbn'] as String?,
-      pageCount: data['pageCount'] as int?,
-      status: data['status'] as String?,
-      authors:
-          data['authors'] != null ? List<String>.from(data['authors']) : null,
-      categories:
-          data['categories'] != null
-              ? List<String>.from(data['categories'])
-              : null,
-    );
-  }
-
   factory Book.fromJson(Map<String, dynamic> json) {
     return Book(
-      id: json['id'] as String? ?? '',
+      id: json['id'] as String,
       title: json['title'] as String,
-      author: json['author'] as String? ?? '',
-      description: json['description'] as String? ?? '',
-      coverImage:
-          json['coverImage'] as String? ??
-          json['thumbnailUrl'] as String? ??
-          '',
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      genres: json['genres'] != null ? List<String>.from(json['genres']) : [],
-      stock: json['stock'] as int? ?? 0,
-      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
-      reviewCount: json['reviewCount'] as int? ?? 0,
-      releaseDate:
-          json['releaseDate'] != null
-              ? (json['releaseDate'] as Timestamp).toDate()
-              : DateTime.now(),
+      author: json['author'] as String,
+      description: json['description'] as String,
+      coverImage: json['coverImage'] as String,
+      price: (json['price'] ?? 0.0).toDouble(),
+      genres: List<String>.from(json['genres'] ?? []),
+      stock: json['stock'] ?? 0,
+      rating: (json['rating'] ?? 0.0).toDouble(),
+      reviewCount: json['reviewCount'] ?? 0,
+      releaseDate: json['releaseDate'] is DateTime
+          ? json['releaseDate'] as DateTime
+          : DateTime.tryParse(json['releaseDate'].toString()) ?? DateTime.now(),
       isBestseller: json['isBestseller'] as bool? ?? false,
       isNewArrival: json['isNewArrival'] as bool? ?? false,
-      isbn: json['isbn'] as String?,
-      pageCount: json['pageCount'] as int?,
+      isbn: json['isbn'] as String,
+      pageCount: json['pageCount'] as int,
       status: json['status'] as String?,
       authors:
           json['authors'] != null ? List<String>.from(json['authors']) : null,
-      categories:
-          json['categories'] != null
-              ? List<String>.from(json['categories'])
-              : null,
+      categories: json['categories'] != null
+          ? List<String>.from(json['categories'])
+          : null,
     );
   }
 
@@ -113,11 +78,11 @@ class Book {
       'stock': stock,
       'rating': rating,
       'reviewCount': reviewCount,
-      'releaseDate': Timestamp.fromDate(releaseDate),
+      'releaseDate': releaseDate,
       'isBestseller': isBestseller,
       'isNewArrival': isNewArrival,
-      if (isbn != null) 'isbn': isbn,
-      if (pageCount != null) 'pageCount': pageCount,
+      'isbn': isbn,
+      'pageCount': pageCount,
       if (status != null) 'status': status,
       if (authors != null) 'authors': authors,
       if (categories != null) 'categories': categories,

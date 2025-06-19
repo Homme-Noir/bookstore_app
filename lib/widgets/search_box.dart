@@ -37,7 +37,7 @@ class SearchBoxDelegate extends SearchDelegate {
   Widget _buildSearchResults(BuildContext context) {
     final bookService = BookService();
     return StreamBuilder(
-      stream: bookService.searchBooksStream(query),
+      stream: bookService.getBooksStream(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Center(child: Text('Error occurred'));

@@ -72,8 +72,8 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
       return;
     }
 
-    final user = context.read<AppProvider>().user;
-    if (user == null) return;
+    final userId = context.read<AppProvider>().userId;
+    if (userId == null) return;
 
     await context.read<AppProvider>().addReview(
           widget.book.id,

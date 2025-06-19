@@ -1,40 +1,44 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'user_service.dart';
+import 'dart:async';
+import '../mock_data.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final UserService _userService = UserService();
 
+  static final _mockUser = {'uid': 'user_001', 'email': 'john.doe@example.com'};
+  static final _authStateController =
+      StreamController<Map<String, String>?>.broadcast();
+
   // Get current user
   User? get currentUser => _auth.currentUser;
 
   // Auth state changes stream
-  Stream<User?> get onAuthStateChanged => _auth.authStateChanges();
+  Stream<Map<String, String>?> get onAuthStateChanged =>
+      _authStateController.stream;
 
   // Sign in with email and password
-  Future<UserCredential> signIn(String email, String password) async {
-    try {
-      return await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-    } catch (e) {
-      rethrow;
-    }
+  Future<void> signIn(String email, String password) async {
+    // Find the mock user by email
+    final user = MockData.users.firstWhere(
+      (u) => u.email == email,
+      orElse: () => throw Exception('No user found with this email.'),
+    );
+    _authStateController.add({'uid': user.id, 'email': user.email});
   }
 
   // Register with email and password
-  Future<UserCredential> signUp(String email, String password) async {
-    try {
-      return await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-    } catch (e) {
-      rethrow;
-    }
+  Future<Map<String, String>> signUp(String email, String password) async {
+    // Find the mock user by email
+    final user = MockData.users.firstWhere(
+      (u) => u.email == email,
+      orElse: () => throw Exception('No user found with this email.'),
+    );
+    _authStateController.add({'uid': user.id, 'email': user.email});
+    return {'uid': user.id, 'email': user.email};
   }
 
   // Sign in with Google
@@ -70,11 +74,7 @@ class AuthService {
 
   // Sign out
   Future<void> signOut() async {
-    try {
-      await _auth.signOut();
-    } catch (e) {
-      rethrow;
-    }
+    _authStateController.add(null);
   }
 
   // Reset password
@@ -118,5 +118,14 @@ class AuthService {
       default:
         return Exception(e.message ?? 'An error occurred.');
     }
+  }
+
+  Future<void> updateUserProfile(
+      {String? userId,
+      String? name,
+      String? email,
+      String? photoUrl,
+      String? address}) async {
+    // No-op for mock
   }
 }

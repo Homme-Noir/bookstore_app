@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/app_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/wide_button.dart';
 import '../../theme/app_theme.dart';
+import '../../mock_data.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -32,10 +33,22 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await context.read<AppProvider>().signIn(
+      await context.read<AuthProvider>().signIn(
             _emailController.text.trim(),
             _passwordController.text.trim(),
           );
+      // Navigate to admin dashboard if admin, else home
+      if (context.read<AuthProvider>().isAuthenticated && mounted) {
+        final email = _emailController.text.trim();
+        final user = MockData.users.where((u) => u.email == email).isNotEmpty
+            ? MockData.users.firstWhere((u) => u.email == email)
+            : null;
+        if (user != null && user.isAdmin) {
+          Navigator.of(context).pushReplacementNamed('/admin');
+        } else {
+          Navigator.of(context).pushReplacementNamed('/');
+        }
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

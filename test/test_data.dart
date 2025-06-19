@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:bookstore_app/models/book.dart';
 import 'package:bookstore_app/models/user_data.dart';
 import 'package:bookstore_app/models/order.dart';
@@ -24,7 +23,7 @@ class TestData {
       'stock': 25,
       'rating': 4.5,
       'reviewCount': 128,
-      'releaseDate': firestore.Timestamp.fromDate(DateTime(1925, 4, 10)),
+      'releaseDate': DateTime(1925, 4, 10),
       'isBestseller': true,
       'isNewArrival': false,
       'isbn': '978-0743273565',
@@ -41,7 +40,7 @@ class TestData {
       'stock': 30,
       'rating': 4.8,
       'reviewCount': 256,
-      'releaseDate': firestore.Timestamp.fromDate(DateTime(1960, 7, 11)),
+      'releaseDate': DateTime(1960, 7, 11),
       'isBestseller': true,
       'isNewArrival': false,
       'isbn': '978-0446310789',
@@ -59,7 +58,7 @@ class TestData {
       'stock': 20,
       'rating': 4.6,
       'reviewCount': 189,
-      'releaseDate': firestore.Timestamp.fromDate(DateTime(1949, 6, 8)),
+      'releaseDate': DateTime(1949, 6, 8),
       'isBestseller': true,
       'isNewArrival': false,
       'isbn': '978-0451524935',
@@ -80,7 +79,7 @@ class TestData {
       'stock': 35,
       'rating': 4.7,
       'reviewCount': 312,
-      'releaseDate': firestore.Timestamp.fromDate(DateTime(1937, 9, 21)),
+      'releaseDate': DateTime(1937, 9, 21),
       'isBestseller': true,
       'isNewArrival': false,
       'isbn': '978-0547928241',
@@ -101,7 +100,7 @@ class TestData {
       'stock': 28,
       'rating': 4.4,
       'reviewCount': 167,
-      'releaseDate': firestore.Timestamp.fromDate(DateTime(1813, 1, 28)),
+      'releaseDate': DateTime(1813, 1, 28),
       'isBestseller': false,
       'isNewArrival': false,
       'isbn': '978-0141439518',
@@ -122,7 +121,7 @@ class TestData {
       'stock': 15,
       'rating': 4.2,
       'reviewCount': 98,
-      'releaseDate': firestore.Timestamp.fromDate(DateTime(1951, 7, 16)),
+      'releaseDate': DateTime(1951, 7, 16),
       'isBestseller': false,
       'isNewArrival': false,
       'isbn': '978-0316769488',
@@ -143,7 +142,7 @@ class TestData {
       'stock': 40,
       'rating': 4.9,
       'reviewCount': 445,
-      'releaseDate': firestore.Timestamp.fromDate(DateTime(1954, 7, 29)),
+      'releaseDate': DateTime(1954, 7, 29),
       'isBestseller': true,
       'isNewArrival': false,
       'isbn': '978-0547928210',
@@ -164,7 +163,7 @@ class TestData {
       'stock': 22,
       'rating': 4.3,
       'reviewCount': 134,
-      'releaseDate': firestore.Timestamp.fromDate(DateTime(1945, 8, 17)),
+      'releaseDate': DateTime(1945, 8, 17),
       'isBestseller': false,
       'isNewArrival': false,
       'isbn': '978-0451526342',
@@ -308,10 +307,8 @@ class TestData {
       'totalAmount': 18.98,
       'shippingAddress': addresses[0],
       'status': 'delivered',
-      'createdAt': firestore.Timestamp.fromDate(
-          DateTime.now().subtract(Duration(days: 30))),
-      'updatedAt': firestore.Timestamp.fromDate(
-          DateTime.now().subtract(Duration(days: 25))),
+      'createdAt': DateTime.now().subtract(Duration(days: 30)),
+      'updatedAt': DateTime.now().subtract(Duration(days: 25)),
       'paymentId': 'pi_001',
       'trackingNumber': 'TRK123456789',
       'paymentMethod': 'credit_card',
@@ -333,10 +330,8 @@ class TestData {
       'totalAmount': 17.98,
       'shippingAddress': addresses[2],
       'status': 'shipped',
-      'createdAt': firestore.Timestamp.fromDate(
-          DateTime.now().subtract(Duration(days: 7))),
-      'updatedAt': firestore.Timestamp.fromDate(
-          DateTime.now().subtract(Duration(days: 5))),
+      'createdAt': DateTime.now().subtract(Duration(days: 7)),
+      'updatedAt': DateTime.now().subtract(Duration(days: 5)),
       'paymentId': 'pi_002',
       'trackingNumber': 'TRK987654321',
       'paymentMethod': 'paypal',
@@ -365,10 +360,8 @@ class TestData {
       'totalAmount': 47.97,
       'shippingAddress': addresses[1],
       'status': 'processing',
-      'createdAt': firestore.Timestamp.fromDate(
-          DateTime.now().subtract(Duration(days: 2))),
-      'updatedAt': firestore.Timestamp.fromDate(
-          DateTime.now().subtract(Duration(days: 1))),
+      'createdAt': DateTime.now().subtract(Duration(days: 2)),
+      'updatedAt': DateTime.now().subtract(Duration(days: 1)),
       'paymentId': 'pi_003',
       'trackingNumber': null,
       'paymentMethod': 'credit_card',
@@ -387,8 +380,7 @@ class TestData {
       'userImage': 'https://example.com/john.jpg',
       'comment': 'A timeless classic!',
       'rating': 5.0,
-      'createdAt': firestore.Timestamp.fromDate(
-          DateTime.now().subtract(Duration(days: 15))),
+      'createdAt': DateTime.now().subtract(Duration(days: 15)),
       'likes': 12,
       'likedBy': ['user_002'],
     },
@@ -401,8 +393,7 @@ class TestData {
       'comment':
           'Good book but a bit slow in the beginning. The ending makes up for it though.',
       'rating': 4.0,
-      'createdAt': firestore.Timestamp.fromDate(
-          DateTime.now().subtract(Duration(days: 10))),
+      'createdAt': DateTime.now().subtract(Duration(days: 10)),
       'likes': 5,
       'likedBy': ['user_002'],
     },
@@ -415,8 +406,7 @@ class TestData {
       'comment':
           'Powerful story about justice and racism. A must-read for everyone.',
       'rating': 5.0,
-      'createdAt': firestore.Timestamp.fromDate(
-          DateTime.now().subtract(Duration(days: 20))),
+      'createdAt': DateTime.now().subtract(Duration(days: 20)),
       'likes': 25,
       'likedBy': ['user_002', 'user_004'],
     },
@@ -429,8 +419,7 @@ class TestData {
       'comment':
           'Disturbing but important. Orwell\'s vision of totalitarianism is still relevant today.',
       'rating': 4.5,
-      'createdAt': firestore.Timestamp.fromDate(
-          DateTime.now().subtract(Duration(days: 8))),
+      'createdAt': DateTime.now().subtract(Duration(days: 8)),
       'likes': 18,
       'likedBy': ['user_001', 'user_004'],
     },
@@ -443,8 +432,7 @@ class TestData {
       'comment':
           'A wonderful adventure story. Perfect for both children and adults.',
       'rating': 4.8,
-      'createdAt': firestore.Timestamp.fromDate(
-          DateTime.now().subtract(Duration(days: 12))),
+      'createdAt': DateTime.now().subtract(Duration(days: 12)),
       'likes': 22,
       'likedBy': ['user_002', 'user_004'],
     },
@@ -463,11 +451,11 @@ class TestData {
       stock: data['stock'] as int,
       rating: (data['rating'] as num).toDouble(),
       reviewCount: data['reviewCount'] as int,
-      releaseDate: (data['releaseDate'] as firestore.Timestamp).toDate(),
+      releaseDate: data['releaseDate'] as DateTime,
       isBestseller: data['isBestseller'] as bool? ?? false,
       isNewArrival: data['isNewArrival'] as bool? ?? false,
-      isbn: data['isbn'] as String?,
-      pageCount: data['pageCount'] as int?,
+      isbn: data['isbn'] as String? ?? '',
+      pageCount: data['pageCount'] as int? ?? 0,
     );
   }
 
@@ -498,10 +486,9 @@ class TestData {
         (e) => e.toString().split('.').last == data['status'],
         orElse: () => OrderStatus.pending,
       ),
-      createdAt: (data['createdAt'] as firestore.Timestamp).toDate(),
-      updatedAt: data['updatedAt'] != null
-          ? (data['updatedAt'] as firestore.Timestamp).toDate()
-          : null,
+      createdAt: data['createdAt'] as DateTime,
+      updatedAt:
+          data['updatedAt'] != null ? data['updatedAt'] as DateTime : null,
       paymentId: data['paymentId'] as String?,
       trackingNumber: data['trackingNumber'] as String?,
       paymentMethod: data['paymentMethod'] as String?,
@@ -519,7 +506,7 @@ class TestData {
       userImage: data['userImage'] as String,
       comment: data['comment'] as String,
       rating: (data['rating'] as num).toDouble(),
-      createdAt: (data['createdAt'] as firestore.Timestamp).toDate(),
+      createdAt: data['createdAt'] as DateTime,
       likes: data['likes'] as int? ?? 0,
       likedBy: List<String>.from(data['likedBy'] as List? ?? []),
     );

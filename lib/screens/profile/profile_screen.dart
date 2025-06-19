@@ -27,7 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AppProvider>(context);
-    final user = provider.user;
+    final userId = provider.userId;
 
     return Scaffold(
       appBar: AppBar(
@@ -39,30 +39,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      body: user == null
+      body: userId == null
           ? const Center(child: Text('Not logged in'))
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                CircleAvatar(
+                const CircleAvatar(
                   radius: 50,
-                  backgroundImage: user.photoURL != null
-                      ? NetworkImage(user.photoURL!)
-                      : null,
-                  child: user.photoURL == null
-                      ? const Icon(Icons.person, size: 50)
-                      : null,
+                  child: Icon(Icons.person, size: 50),
                 ),
                 const SizedBox(height: 16),
-                Text(
-                  user.displayName ?? 'No name',
-                  style: Theme.of(context).textTheme.headlineSmall,
+                const Text(
+                  'User',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  user.email ?? 'No email',
-                  style: Theme.of(context).textTheme.bodyLarge,
+                const Text(
+                  'user@example.com',
+                  style: TextStyle(fontSize: 16),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),

@@ -19,7 +19,7 @@ class WishlistProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      _wishlist = await _wishlistService.getWishlist(userId);
+      _wishlist = await _wishlistService.getWishlistBooks(userId).first;
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -35,7 +35,7 @@ class WishlistProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      await _wishlistService.addToWishlist(userId, book.id);
+      await _wishlistService.addToWishlist(book.id);
       _wishlist.add(book);
     } catch (e) {
       _error = e.toString();
@@ -52,7 +52,7 @@ class WishlistProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      await _wishlistService.removeFromWishlist(userId, bookId);
+      await _wishlistService.removeFromWishlist(bookId);
       _wishlist.removeWhere((book) => book.id == bookId);
     } catch (e) {
       _error = e.toString();

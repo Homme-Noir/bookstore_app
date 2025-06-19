@@ -17,14 +17,14 @@
 
 ## Project Overview
 
-The Book Store app is a Flutter-based e-commerce application that allows users to browse, purchase, and manage books. The app uses Firebase for backend services, Stripe for payments, and follows a clean architecture pattern.
+This app is now fully mock-based for development and testing. All data (users, books, orders, etc.) is stored in memory using Dart objects. All authentication and data operations are handled with mock data.
 
 ### Tech Stack
 - **Frontend**: Flutter 3.2.3+ (Dart)
-- **Backend**: Firebase (Authentication, Firestore, Storage)
+- **Backend**: Mock data
 - **State Management**: Provider
-- **Payment Processing**: Stripe
-- **Authentication**: Firebase Auth + Google Sign-In
+- **Payment Processing**: Mock
+- **Authentication**: Mock
 - **UI**: Material Design with Google Fonts
 - **Image Handling**: Image Picker
 - **Local Storage**: Shared Preferences
@@ -79,8 +79,6 @@ lib/
 - Flutter SDK (3.2.3 or higher)
 - Dart SDK
 - Android Studio / VS Code
-- Firebase account
-- Stripe account (for payments)
 - Git
 
 ### Environment Setup
@@ -95,23 +93,7 @@ lib/
    flutter pub get
    ```
 
-3. **Configure Firebase**:
-   - Create a new Firebase project
-   - Add Android and iOS apps
-   - Download and add configuration files:
-     - `android/app/google-services.json`
-     - `ios/Runner/GoogleService-Info.plist`
-   - Enable required Firebase services:
-     - Authentication (Email/Password, Google)
-     - Firestore Database
-     - Storage
-
-4. **Configure Stripe**:
-   - Create a Stripe account
-   - Get your publishable key
-   - Add to app configuration
-
-5. **Run the app**:
+3. **Run the app**:
    ```bash
    flutter run
    ```
@@ -670,15 +652,6 @@ class AuthException extends AppException {
 
 ### Common Issues
 
-#### Firebase Configuration
-```bash
-# Check Firebase setup
-flutterfire configure
-
-# Verify google-services.json
-# Ensure it's in android/app/google-services.json
-```
-
 #### Build Errors
 ```bash
 # Clean project
@@ -701,12 +674,6 @@ flutter logs
 # Test network connectivity
 # Check API keys configuration
 ```
-
-#### Payment Issues
-- Verify Stripe keys are correct
-- Check payment method configuration
-- Ensure proper error handling
-- Test with Stripe test cards
 
 ### Debug Tools
 ```dart
@@ -734,3 +701,33 @@ For developer support:
 ---
 
 **Last Updated**: June 18, 2025
+
+## Authentication
+- Login uses mock users defined in `lib/mock_data.dart`.
+- Two users are available by default:
+  - **Test User:** `john.doe@example.com` (any password)
+  - **Admin User:** `admin@bookstore.com` (any password)
+- Any password is accepted for these users.
+- If you log in as the admin, you are redirected to the admin dashboard. If you log in as the test user, you are redirected to the home screen.
+- To add more users, edit the `MockData.users` list in `lib/mock_data.dart`.
+
+## Mock Data
+- All books, users, and other entities are defined in `lib/mock_data.dart`.
+- To add more books, users, or other data, simply add to the corresponding lists in that file.
+- No data is persisted between app restarts.
+
+## Removing Firebase/Stripe
+- All Firebase, Firestore, and Stripe code has been removed or replaced with mock logic.
+- No setup for Firebase or Stripe is required.
+
+## Running the App
+- Run as a normal Flutter app: `flutter run`
+- No additional setup or configuration is needed.
+
+## Error Handling
+- If a mock image URL is invalid, a placeholder or error icon will be shown.
+- All authentication and data errors are handled in-memory and will not affect the app state.
+
+## Adding Features
+- To add new features, create new mock data or services as needed.
+- For real backend integration, you will need to reintroduce real services and update the providers accordingly.

@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'address.dart';
 import 'book.dart';
 
@@ -106,51 +105,6 @@ class Order {
       shippingCost: shippingCost ?? this.shippingCost,
       tax: tax ?? this.tax,
     );
-  }
-
-  factory Order.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return Order(
-      id: doc.id,
-      userId: data['userId'] as String,
-      items: (data['items'] as List)
-          .map((item) => OrderItem.fromMap(item as Map<String, dynamic>))
-          .toList(),
-      totalAmount: (data['totalAmount'] as num).toDouble(),
-      shippingAddress: ShippingAddress.fromJson(
-        data['shippingAddress'] as Map<String, dynamic>,
-      ),
-      status: OrderStatus.values.firstWhere(
-        (e) => e.toString().split('.').last == data['status'],
-        orElse: () => OrderStatus.pending,
-      ),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: data['updatedAt'] != null
-          ? (data['updatedAt'] as Timestamp).toDate()
-          : null,
-      paymentId: data['paymentId'] as String?,
-      trackingNumber: data['trackingNumber'] as String?,
-      paymentMethod: data['paymentMethod'] as String?,
-      shippingCost: (data['shippingCost'] as num?)?.toDouble(),
-      tax: (data['tax'] as num?)?.toDouble(),
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'userId': userId,
-      'items': items.map((item) => item.toMap()).toList(),
-      'totalAmount': totalAmount,
-      'shippingAddress': shippingAddress.toJson(),
-      'status': status.toString().split('.').last,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
-      'paymentId': paymentId,
-      'trackingNumber': trackingNumber,
-      'paymentMethod': paymentMethod,
-      'shippingCost': shippingCost,
-      'tax': tax,
-    };
   }
 
   // Computed getters for UI compatibility

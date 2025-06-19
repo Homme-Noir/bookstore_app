@@ -9,63 +9,43 @@ class UserProvider with ChangeNotifier {
   String? _error;
 
   UserProvider({
-    required UserService userService,
-  }) : _userService = userService;
+    UserService? userService,
+  }) : _userService = userService ?? UserService();
 
   UserData? get userData => _userData;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Load user data
-  Future<void> loadUserData(String userId) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      _userData = await _userService.getUserData(userId);
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+  // Stub loadUserData for mock
+  void loadUserData(String userId) {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    _userData = _userService.getUserById(userId);
+    _isLoading = false;
+    notifyListeners();
   }
 
-  // Update user data
-  Future<void> updateUserData(UserData userData) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      await _userService.updateUserData(userData);
-      _userData = userData;
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+  // Stub updateUserData for mock
+  void updateUserData(UserData userData) {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    _userData = userData;
+    _isLoading = false;
+    notifyListeners();
   }
 
-  // Update profile photo
-  Future<void> updateProfilePhoto(String userId, String photoUrl) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      await _userService.updateProfilePhoto(userId, photoUrl);
-      if (_userData != null) {
-        _userData = _userData!.copyWith(photoUrl: photoUrl);
-      }
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+  // Stub updateProfilePhoto for mock
+  void updateProfilePhoto(String userId, String photoUrl) {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    if (_userData != null) {
+      _userData = _userData!.copyWith(photoUrl: photoUrl);
     }
+    _isLoading = false;
+    notifyListeners();
   }
 
   // Clear error

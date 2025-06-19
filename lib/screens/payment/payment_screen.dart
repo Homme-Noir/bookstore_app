@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_stripe/flutter_stripe.dart' hide Card;
 import '../../providers/app_provider.dart';
 import '../../models/address.dart';
 
@@ -22,71 +21,23 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   bool _isProcessing = false;
-  final _cardFormKey = GlobalKey<FormState>();
-  CardFormEditController _cardFormController = CardFormEditController();
 
-  @override
-  void initState() {
-    super.initState();
-    _cardFormController = CardFormEditController();
-  }
-
-  @override
-  void dispose() {
-    _cardFormController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _processPayment() async {
-    if (!_cardFormKey.currentState!.validate()) {
-      return;
-    }
-
+  Future<void> _mockProcessPayment() async {
     setState(() {
       _isProcessing = true;
     });
-
-    try {
-      // Create payment intent on your backend
-      final response = await Provider.of<AppProvider>(context, listen: false)
-          .createPaymentIntent(widget.total);
-
-      // Initialize payment sheet
-      await Stripe.instance.initPaymentSheet(
-        paymentSheetParameters: SetupPaymentSheetParameters(
-          paymentIntentClientSecret: response['clientSecret'],
-          merchantDisplayName: 'Bookstore App',
-          style: ThemeMode.system,
-        ),
-      );
-
-      // Present payment sheet
-      await Stripe.instance.presentPaymentSheet();
-
-      if (!mounted) return;
-
-      await Provider.of<AppProvider>(context, listen: false).placeOrder(
-        items: widget.items,
-        address: widget.address,
-        total: widget.total,
-      );
-
-      if (!mounted) return;
-
-      Navigator.of(context).pushReplacementNamed('/order-success');
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Payment failed: $e')),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
-      }
-    }
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+    await Provider.of<AppProvider>(context, listen: false).placeOrder(
+      items: widget.items,
+      address: widget.address,
+      total: widget.total,
+    );
+    if (!mounted) return;
+    setState(() {
+      _isProcessing = false;
+    });
+    Navigator.of(context).pushReplacementNamed('/order-success');
   }
 
   @override
@@ -134,30 +85,33 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Payment Details',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 16),
-                    Form(
-                      key: _cardFormKey,
-                      child: CardFormField(
-                        controller: _cardFormController,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _isProcessing ? null : _processPayment,
+              onPressed: _isProcessing
+                  ? null
+                  : () async {
+                      await showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Confirm Payment'),
+                          content: const Text('Proceed with mock payment?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('Cancel'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text('Confirm'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (mounted && !_isProcessing) {
+                        await _mockProcessPayment();
+                      }
+                    },
               child: _isProcessing
                   ? const CircularProgressIndicator()
                   : const Text('Pay Now'),
