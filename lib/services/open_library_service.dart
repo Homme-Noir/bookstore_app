@@ -5,8 +5,118 @@ import '../models/book.dart';
 class OpenLibraryService {
   static const String _baseUrl = 'https://openlibrary.org';
 
-  /// Search for books by title, author, or general query
-  Future<List<OpenLibraryBook>> searchBooks(String query) async {
+  /// Gets a default list of popular books from Open Library API.
+  Future<List<Book>> getDefaultBooks() async {
+    try {
+      // Search for popular books using a more reliable query
+      final response = await http.get(
+        Uri.parse('$_baseUrl/search.json?q=fiction&limit=20'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final docs = data['docs'] as List;
+
+        return docs
+            .map((doc) => OpenLibraryBook.fromSearchResult(doc))
+            .map((olBook) => convertToBook(olBook))
+            .toList();
+      } else {
+        throw Exception('Failed to get default books: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error getting default books: $e');
+    }
+  }
+
+  /// Gets books by category/genre from Open Library API.
+  Future<List<Book>> getBooksByCategory(String category) async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+            '$_baseUrl/search.json?subject=${Uri.encodeComponent(category)}&limit=15'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final docs = data['docs'] as List;
+
+        return docs
+            .map((doc) => OpenLibraryBook.fromSearchResult(doc))
+            .map((olBook) => convertToBook(olBook))
+            .toList();
+      } else {
+        throw Exception(
+            'Failed to get books by category: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error getting books by category: $e');
+    }
+  }
+
+  /// Gets books for specific categories with different queries
+  Future<List<Book>> getBooksForCategory(String category) async {
+    try {
+      String query;
+      switch (category.toLowerCase()) {
+        case 'action':
+          query = 'action adventure thriller';
+          break;
+        case 'romance':
+          query = 'romance love story';
+          break;
+        case 'mystery':
+          query = 'mystery detective crime';
+          break;
+        case 'science fiction':
+          query = 'science fiction sci-fi';
+          break;
+        case 'fantasy':
+          query = 'fantasy magic adventure';
+          break;
+        case 'biography':
+          query = 'biography memoir autobiography';
+          break;
+        case 'history':
+          query = 'history historical';
+          break;
+        case 'self-help':
+          query = 'self-help personal development';
+          break;
+        case 'business':
+          query = 'business economics management';
+          break;
+        case 'cooking':
+          query = 'cooking food recipes';
+          break;
+        default:
+          query = category;
+      }
+
+      final response = await http.get(
+        Uri.parse(
+            '$_baseUrl/search.json?q=${Uri.encodeComponent(query)}&limit=15'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final docs = data['docs'] as List;
+
+        return docs
+            .map((doc) => OpenLibraryBook.fromSearchResult(doc))
+            .map((olBook) => convertToBook(olBook))
+            .toList();
+      } else {
+        throw Exception(
+            'Failed to get books for category: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error getting books for category: $e');
+    }
+  }
+
+  /// Searches for books by title, author, or general query using Open Library API.
+  Future<List<Book>> searchBooks(String query) async {
     try {
       final response = await http.get(
         Uri.parse(
@@ -19,6 +129,7 @@ class OpenLibraryService {
 
         return docs
             .map((doc) => OpenLibraryBook.fromSearchResult(doc))
+            .map((olBook) => convertToBook(olBook))
             .toList();
       } else {
         throw Exception('Failed to search books: ${response.statusCode}');
@@ -28,7 +139,7 @@ class OpenLibraryService {
     }
   }
 
-  /// Get book details by ISBN
+  /// Gets book details by ISBN from Open Library API.
   Future<OpenLibraryBook?> getBookByIsbn(String isbn) async {
     try {
       final response = await http.get(
@@ -50,7 +161,7 @@ class OpenLibraryService {
     }
   }
 
-  /// Get book details by Open Library ID
+  /// Gets book details by Open Library ID from Open Library API.
   Future<OpenLibraryBook?> getBookById(String id) async {
     try {
       final response = await http.get(
@@ -67,10 +178,11 @@ class OpenLibraryService {
     }
   }
 
-  /// Convert OpenLibraryBook to your app's Book model
+  /// Converts an OpenLibraryBook to the app's Book model.
   Book convertToBook(OpenLibraryBook olBook) {
     return Book(
-      id: '', // Will be set when saving to Firestore
+      id: olBook.openLibraryId ??
+          'book_${DateTime.now().millisecondsSinceEpoch}',
       title: olBook.title,
       author: olBook.authors.isNotEmpty ? olBook.authors.first : '',
       authors: olBook.authors.isNotEmpty ? olBook.authors : null,
@@ -121,13 +233,13 @@ class OpenLibraryBook {
   factory OpenLibraryBook.fromSearchResult(Map<String, dynamic> data) {
     return OpenLibraryBook(
       title: data['title'] ?? '',
-      authors: _extractAuthors(data['author_name']),
+      authors: OpenLibraryBook.extractAuthors(data['author_name']),
       description: data['first_sentence']?.first ?? '',
       coverImage: _getCoverImage(data['cover_i']),
       publishDate: _parseDate(data['first_publish_year']),
       isbn: _extractIsbn(data['isbn']),
       pageCount: data['number_of_pages_median'],
-      subjects: _extractSubjects(data['subject']),
+      subjects: OpenLibraryBook.extractSubjects(data['subject']),
       publisher: data['publisher']?.first,
       openLibraryId: data['key'],
     );
@@ -137,7 +249,7 @@ class OpenLibraryBook {
       Map<String, dynamic> data, String isbn) {
     return OpenLibraryBook(
       title: data['title'] ?? '',
-      authors: _extractAuthorsFromIsbn(data['authors']),
+      authors: OpenLibraryBook.extractAuthorsFromIsbn(data['authors']),
       description: data['excerpts']?.first?['text'] ?? '',
       coverImage: _getCoverImageFromIsbn(data['cover']),
       publishDate: _parseDateFromIsbn(data['publish_date']),
@@ -152,39 +264,16 @@ class OpenLibraryBook {
   factory OpenLibraryBook.fromWorkResult(Map<String, dynamic> data) {
     return OpenLibraryBook(
       title: data['title'] ?? '',
-      authors: _extractAuthorsFromWork(data['authors']),
+      authors: OpenLibraryBook.extractAuthors(data['authors']),
       description: data['description']?['value'] ?? '',
       coverImage: _getCoverImageFromWork(data['covers']),
       publishDate: _parseDateFromWork(data['first_publish_date']),
       isbn: null, // Not available in work data
       pageCount: null,
-      subjects: _extractSubjectsFromWork(data['subjects']),
+      subjects: OpenLibraryBook.extractSubjects(data['subjects']),
       publisher: null,
       openLibraryId: data['key'],
     );
-  }
-
-  static List<String> _extractAuthors(dynamic authorData) {
-    if (authorData is List) {
-      return authorData.cast<String>();
-    }
-    return [];
-  }
-
-  static List<String> _extractAuthorsFromIsbn(dynamic authorsData) {
-    if (authorsData is List) {
-      return authorsData.map((author) => author['name'] as String).toList();
-    }
-    return [];
-  }
-
-  static List<String> _extractAuthorsFromWork(dynamic authorsData) {
-    if (authorsData is List) {
-      return authorsData
-          .map((author) => author['author']['key'] as String)
-          .toList();
-    }
-    return [];
   }
 
   static String? _getCoverImage(dynamic coverId) {
@@ -248,13 +337,6 @@ class OpenLibraryBook {
     return null;
   }
 
-  static List<String> _extractSubjects(dynamic subjectsData) {
-    if (subjectsData is List) {
-      return subjectsData.cast<String>();
-    }
-    return [];
-  }
-
   static List<String> _extractSubjectsFromIsbn(dynamic subjectsData) {
     if (subjectsData is List) {
       return subjectsData.map((subject) => subject['name'] as String).toList();
@@ -262,9 +344,23 @@ class OpenLibraryBook {
     return [];
   }
 
-  static List<String> _extractSubjectsFromWork(dynamic subjectsData) {
+  static List<String> extractAuthors(dynamic authorData) {
+    if (authorData is List) {
+      return authorData.cast<String>();
+    }
+    return [];
+  }
+
+  static List<String> extractSubjects(dynamic subjectsData) {
     if (subjectsData is List) {
-      return subjectsData.map((subject) => subject['name'] as String).toList();
+      return subjectsData.cast<String>();
+    }
+    return [];
+  }
+
+  static List<String> extractAuthorsFromIsbn(dynamic authorsData) {
+    if (authorsData is List) {
+      return authorsData.map((author) => author['name'] as String).toList();
     }
     return [];
   }

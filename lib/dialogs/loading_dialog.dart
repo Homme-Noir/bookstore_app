@@ -3,7 +3,7 @@ import '../widgets/loading_widget.dart';
 
 class LoadingAlertDialog extends StatelessWidget {
   final String message;
-  
+
   const LoadingAlertDialog({
     super.key,
     required this.message,

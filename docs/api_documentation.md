@@ -1,55 +1,69 @@
-# API Documentation (Mock/In-Memory)
+# API Documentation
 
 ## Overview
-All API calls are now handled in-memory using mock data. There are **no network or backend calls**. All data is lost on app restart.
+All data operations are handled **locally in Dart** using Provider and SharedPreferences.  
+There are **no real network or backend API calls**.  
+All data is lost if the app is uninstalled or local storage is cleared.
+
+---
 
 ## Authentication
-- **Login:**
-  - Use `john.doe@example.com` (test user) or `admin@bookstore.com` (admin user) with any password.
-  - Logging in as admin redirects to the admin dashboard; test user goes to the home screen.
-  - To add more users, edit `MockData.users` in `lib/mock_data.dart`.
-- **Register:**
-  - Only works for emails present in `MockData.users`.
+- **Login:**  
+  - Any email/password combination is accepted for demo purposes.
+  - Logging in as `admin@bookstore.com` enables admin features.
+- **Register:**  
+  - Registration is simulated; no real user database.
+
+---
 
 ## Books
-- **Get all books:** Returns the list from `MockData.books`.
-- **Get book by ID:** Looks up a book in `MockData.books`.
-- **Add/update/delete book:** Only available to admin user; modifies the in-memory list.
+- **Get all books:**  
+  - Books are fetched from Open Library API at runtime and cached locally.
+- **Get book by ID:**  
+  - Books are identified by their Open Library ID.
+- **Add to library:**  
+  - User must "purchase" (simulated payment) before adding a book to their library.
+- **Wishlist/Favorites:**  
+  - Add/remove books to/from wishlist and favorites, stored locally.
 
-## Categories
-- **Get all categories:** Returns a static list from the provider or `BookService`.
-- **Add/update/delete category:** Only available to admin user; modifies the in-memory list.
+---
 
-## Cart
-- **Add to cart, remove from cart, update quantity, clear cart:** All operations are in-memory and per session.
+## Cart & Checkout
+- **Add to cart:**  
+  - Books can be added to a cart for simulated checkout.
+- **Checkout:**  
+  - Simulates a $5 payment per book, then adds books to the user's library and order history.
+
+---
 
 ## Orders
-- **Place order:** Creates an in-memory order for the current user.
-- **Get user orders:** Returns orders for the current user from the in-memory list.
-- **Get all orders:** Only available to admin user.
+- **Order history:**  
+  - Each checkout creates an order, stored locally in the user's order history.
+- **Order details:**  
+  - Each order contains a list of books, total amount, and timestamp.
 
-## Wishlist
-- **Add/remove/check wishlist:** All operations are in-memory and per session.
+---
 
-## Reviews
-- **Add/retrieve reviews:** All operations are in-memory and per session.
+## Admin Dashboard
+- **Access:**  
+  - Only visible for `admin@bookstore.com`.
+- **Features:**  
+  - User overview (current user only in local mode)
+  - Analytics: total orders, total sales, most popular books
+
+---
 
 ## Error Handling
-- If you try to log in with an email not in `MockData.users`, you get an error.
-- All other errors are handled in-memory and do not affect persistent state.
+- Most errors are shown as SnackBars in the UI.
+- No persistent error logs.
+
+---
 
 ## Notes
-- **No data is persisted.** All data is lost when the app restarts.
-- **No real API endpoints exist.** All logic is handled in Dart code.
+- **No real API endpoints exist.**  
+- **No data is persisted to a backend.**  
+- **All logic is handled in Dart code and local storage.**
 
 ---
 
-# (Legacy) Firebase/Stripe API (No Longer Used)
-<!--
-## Firebase/Firestore/Stripe API
-... (remove or comment out all Firebase/Firestore/Stripe API documentation) ...
--->
-
----
-
-**Last Updated**: June 18, 2025 
+_Last updated: June 2025_ 

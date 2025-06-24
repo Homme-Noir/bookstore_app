@@ -1,80 +1,71 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import '../services/auth_service.dart';
-import '../services/cart_service.dart';
-import '../services/book_service.dart';
-import '../services/order_service.dart';
+import '../services/open_library_service.dart';
 import '../models/book.dart';
-import '../models/order.dart' as model;
-import '../models/address.dart';
-import '../models/cart_item.dart';
-
-enum PaymentMethod {
-  creditCard,
-  debitCard,
-  paypal,
-  cashOnDelivery,
-}
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'dart:math';
 
 /// A provider class that manages the application state and services.
 class AppProvider extends ChangeNotifier {
   /// The authentication service for user management.
   final AuthService _authService;
 
-  /// The book service for managing book data.
-  final BookService _bookService;
-
-  /// The cart service for managing the shopping cart.
-  final CartService _cartService;
-
-  /// The order service for managing orders.
-  final OrderService _orderService;
-
-  /// The Firestore instance for accessing Firestore.
-  final firestore.FirebaseFirestore _firestore;
+  /// The Open Library service for fetching book data.
+  final OpenLibraryService _openLibraryService;
 
   /// The current user of the application.
   String? _userId;
 
-  /// The list of categories available in the store.
-  List<String> _categories = [];
-
-  /// The list of books in the store.
+  /// The list of books from Open Library.
   List<Book> _books = [];
 
-  /// The list of orders made by the user.
-  List<model.Order> _orders = [];
+  /// The list of books purchased by the user.
+  List<Book> _purchasedBooks = [];
 
-  /// The list of items in the user's cart.
-  List<CartItem> _cartItems = [];
+  /// The list of books in user's wishlist.
+  List<Book> _wishlist = [];
+
+  /// The list of books in user's favorites.
+  List<Book> _favourites = [];
+
+  /// Books organized by categories
+  final Map<String, List<Book>> _booksByCategory = {};
 
   /// The current theme mode of the application.
   ThemeMode _themeMode = ThemeMode.system;
 
-  /// Returns whether the provider is currently loading data.
-  final bool _isLoading = false;
+  /// Loading state for books
+  bool _isLoadingBooks = false;
+  String? _booksError;
 
-  /// Returns whether the user is authenticated.
-  bool get isAuthenticated => _userId != null;
+  /// Returns whether the provider is currently loading books.
+  bool get isLoadingBooks => _isLoadingBooks;
 
-  /// Returns whether the provider is currently loading data.
-  bool get isLoading => _isLoading;
+  /// Returns the current error message for books.
+  String? get booksError => _booksError;
 
   /// Returns the current theme mode.
   ThemeMode get themeMode => _themeMode;
 
+  /// Returns whether the user is authenticated.
+  bool get isAuthenticated => _userId != null;
+
+  /// Returns books organized by category
+  Map<String, List<Book>> get booksByCategory => _booksByCategory;
+
+  /// Returns the list of books in wishlist
+  List<Book> get wishlist => _wishlist;
+
+  /// Returns the list of books in favourites
+  List<Book> get favourites => _favourites;
+
   /// Creates a new instance of AppProvider.
   AppProvider({
     required AuthService authService,
-    required BookService bookService,
-    required CartService cartService,
-    required OrderService orderService,
-    required firestore.FirebaseFirestore firestore,
+    required OpenLibraryService openLibraryService,
   })  : _authService = authService,
-        _bookService = bookService,
-        _cartService = cartService,
-        _orderService = orderService,
-        _firestore = firestore {
+        _openLibraryService = openLibraryService {
     _init();
   }
 
@@ -96,65 +87,132 @@ class AppProvider extends ChangeNotifier {
       notifyListeners();
     });
 
-    _loadCategories();
-    _loadBooks();
+    await _loadBooksByCategory();
   }
 
-  /// Loads user-specific data such as cart and orders.
+  /// Loads user-specific data such as purchased books, wishlist, and favourites.
   Future<void> _loadUserData() async {
     if (_userId == null) return;
 
-    _cartItems = await _cartService.getCartItems();
+    await Future.wait([
+      loadPurchasedBooks(),
+      loadWishlist(),
+      loadFavourites(),
+    ]);
     notifyListeners();
-
-    _orderService.getUserOrders(_userId!).listen((orders) {
-      _orders = orders;
-      notifyListeners();
-    });
   }
 
   /// Clears user-specific data when the user logs out.
   void _clearUserData() {
-    _cartItems = [];
-    _orders = [];
+    _purchasedBooks = [];
+    _wishlist = [];
+    _favourites = [];
     notifyListeners();
   }
 
-  /// Loads the list of categories from the book service.
-  Future<void> _loadCategories() async {
-    // Use mock data for categories
-    _categories = ['Fiction', 'Classic', 'Fantasy', 'Romance', 'Adventure'];
-    notifyListeners();
+  /// Loads books organized by categories
+  Future<void> _loadBooksByCategory() async {
+    try {
+      _isLoadingBooks = true;
+      _booksError = null;
+      notifyListeners();
+
+      final categories = [
+        'Action',
+        'Romance',
+        'Mystery',
+        'Science Fiction',
+        'Fantasy',
+        'Biography',
+        'History',
+        'Self-Help',
+        'Business',
+        'Cooking',
+      ];
+
+      _booksByCategory.clear();
+
+      for (final category in categories) {
+        try {
+          final books = await _openLibraryService.getBooksForCategory(category);
+          // Set price and random rating for all books
+          final random = Random();
+          final processedBooks = books.map((book) {
+            return Book(
+              id: book.id,
+              title: book.title,
+              author: book.author,
+              description: book.description,
+              coverImage: book.coverImage,
+              price: 5.0,
+              genres: book.genres,
+              stock: book.stock,
+              rating: 3.0 + random.nextDouble() * 2.0, // 3.0 to 5.0
+              reviewCount: book.reviewCount,
+              releaseDate: book.releaseDate,
+              isBestseller: book.isBestseller,
+              isNewArrival: book.isNewArrival,
+              isbn: book.isbn,
+              pageCount: book.pageCount,
+              status: book.status,
+              authors: book.authors,
+              categories: book.categories,
+            );
+          }).toList();
+
+          _booksByCategory[category] = processedBooks;
+        } catch (e) {
+          debugPrint('Error loading books for category $category: $e');
+          _booksByCategory[category] = [];
+        }
+      }
+
+      // Also load general books for the main store
+      _books = await _openLibraryService.getDefaultBooks();
+      final random = Random();
+      _books = _books.map((book) {
+        return Book(
+          id: book.id,
+          title: book.title,
+          author: book.author,
+          description: book.description,
+          coverImage: book.coverImage,
+          price: 5.0,
+          genres: book.genres,
+          stock: book.stock,
+          rating: 3.0 + random.nextDouble() * 2.0, // 3.0 to 5.0
+          reviewCount: book.reviewCount,
+          releaseDate: book.releaseDate,
+          isBestseller: book.isBestseller,
+          isNewArrival: book.isNewArrival,
+          isbn: book.isbn,
+          pageCount: book.pageCount,
+          status: book.status,
+          authors: book.authors,
+          categories: book.categories,
+        );
+      }).toList();
+    } catch (e) {
+      _booksError = e.toString();
+    } finally {
+      _isLoadingBooks = false;
+      notifyListeners();
+    }
   }
 
-  /// Loads the list of books from the book service.
-  void _loadBooks() {
-    _books = _bookService.getBooks();
-    notifyListeners();
+  /// Public method to load books from Open Library.
+  Future<void> loadBooks() async {
+    await _loadBooksByCategory();
   }
 
   /// Returns the current user.
   String? get userId => _userId;
 
-  /// Returns the list of categories.
-  List<String> get categories => _categories;
-
   /// Returns the list of books.
   List<Book> get books => _books;
 
-  /// Returns the list of orders made by the user.
-  List<model.Order> get orders => _orders;
-
-  /// Returns the list of items in the user's cart.
-  List<CartItem> get cartItems => _cartItems;
-
-  /// Returns the total number of items in the user's cart.
-  int get cartItemCount =>
-      _cartItems.fold(0, (sum, item) => sum + item.quantity);
-
-  /// Returns the total price of items in the user's cart.
-  double get cartTotal =>
-      _cartItems.fold(0.0, (sum, item) => sum + (item.price * item.quantity));
+  /// Returns the list of books purchased by the user.
+  List<Book> get purchasedBooks => _purchasedBooks;
 
   /// Signs in a user with the provided email and password.
   Future<void> signIn(String email, String password) async {
@@ -162,13 +220,8 @@ class AppProvider extends ChangeNotifier {
   }
 
   /// Signs up a new user with the provided email and password.
-  Future<String> registerWithEmailAndPassword(
-    String email,
-    String password,
-    String name,
-  ) async {
-    final user = await _authService.signUp(email, password);
-    return user['uid'] ?? '';
+  Future<void> signUp(String email, String password) async {
+    await _authService.signUp(email, password);
   }
 
   /// Signs out the current user.
@@ -176,274 +229,363 @@ class AppProvider extends ChangeNotifier {
     await _authService.signOut();
   }
 
-  /// Adds a book to the user's cart.
-  Future<void> addToCart(Book book, int quantity) async {
-    if (_userId == null) return;
-    await _cartService.addToCart(book.id, quantity);
-  }
-
-  /// Removes a book from the user's cart.
-  Future<void> removeFromCart(String bookId) async {
-    if (_userId == null) return;
-    await _cartService.removeFromCart(bookId);
-  }
-
-  /// Updates the quantity of a book in the user's cart.
-  Future<void> updateCartItemQuantity(String bookId, int quantity) async {
-    if (_userId == null) return;
-    await _cartService.updateQuantity(bookId, quantity);
-  }
-
-  /// Clears the user's cart.
-  Future<void> clearCart() async {
-    if (_userId == null) return;
-    await _cartService.clearCart();
-  }
-
-  /// Places an order with the provided shipping address and payment method.
-  Future<void> placeOrder({
-    required List<Map<String, dynamic>> items,
-    required ShippingAddress address,
-    required double total,
-  }) async {
-    if (_userId == null) return;
-    await _orderService.createOrder(
-      userId: _userId!,
-      items: items,
-      shippingAddress: address,
-      total: total,
-    );
-    await clearCart();
-  }
-
-  /// Returns a stream of books filtered by category and sort option.
-  Stream<List<Book>> getBooksFiltered(
-      {String? category, String? sort, int? pageSize}) {
-    return _bookService.getBooksStream();
-  }
-
-  /// Returns a stream of bestseller books.
-  Stream<List<Book>> getBestsellers() {
-    return _bookService.getBooksStream();
-  }
-
-  /// Returns a stream of new arrival books.
-  Stream<List<Book>> getNewArrivals() {
-    return _bookService.getBooksStream();
-  }
-
-  /// Returns a stream of orders made by the user.
-  Stream<List<model.Order>> getUserOrdersStream() {
-    if (_userId == null) return Stream.value([]);
-    return _orderService.getUserOrders(_userId!);
-  }
-
-  /// Returns a stream of items in the user's cart.
-  Stream<List<CartItem>> getCartStream() {
-    if (_userId == null) return Stream.value([]);
-    return _cartService.getCartStream();
-  }
-
-  /// Adds a new book to the store.
-  Future<void> addBook(Book book) async {
-    await _bookService.addBook(book);
-    _loadBooks();
-  }
-
-  /// Updates an existing book in the store.
-  Future<void> updateBook(Book book) async {
-    await _bookService.updateBook(book);
-    _loadBooks();
-  }
-
-  /// Deletes a book from the store.
-  Future<void> deleteBook(String bookId) async {
-    await _bookService.deleteBook(bookId);
-    _loadBooks();
-  }
-
-  /// Gets all books from the store.
-  Future<List<Book>> getAllBooks() async {
-    return _bookService.getBooks();
-  }
-
-  /// Gets all categories from the store.
-  Future<List<String>> getAllCategories() async {
-    return await _bookService.getCategories();
-  }
-
-  /// Adds a new category to the store.
-  Future<void> addCategory(String category) async {
-    await _bookService.addCategory(category);
-    await _loadCategories();
-  }
-
-  /// Updates an existing category in the store.
-  Future<void> updateCategory(String oldCategory, String newCategory) async {
-    await _bookService.updateCategory(oldCategory, newCategory);
-    await _loadCategories();
-  }
-
-  /// Deletes a category from the store.
-  Future<void> deleteCategory(String category) async {
-    await _bookService.deleteCategory(category);
-    await _loadCategories();
-  }
-
-  /// Gets all orders from the store.
-  Future<List<model.Order>> getAllOrders() async {
-    return await _orderService.getAllOrdersFuture();
-  }
-
-  /// Updates the status of an order.
-  Future<void> updateOrderStatus(
-      String orderId, model.OrderStatus status) async {
-    await _orderService.updateOrderStatus(orderId, status);
-  }
-
-  /// Gets all books from the store as a stream.
-  Stream<List<Book>> getAllBooksStream() {
-    return _bookService.getBooksStream();
-  }
-
-  /// Gets all categories from the store as a stream.
-  Stream<List<String>> getAllCategoriesStream() {
-    // Return a stream of the mock categories
-    return Stream.value(
-        ['Fiction', 'Classic', 'Fantasy', 'Romance', 'Adventure']);
-  }
-
-  /// Gets all orders from the store as a stream.
-  Stream<List<model.Order>> getAllOrdersStream() {
-    return _orderService.getAllOrders();
-  }
-
-  /// Returns a stream of books in the user's wishlist.
-  Stream<List<Book>> getWishlistBooks() {
-    // Return an empty stream or implement a mock wishlist if needed
-    return Stream.value([]);
-  }
-
-  /// Checks if a book is in the user's wishlist.
-  Future<bool> isInWishlist(String bookId) async {
-    if (_userId == null) return false;
-    final doc = await _firestore
-        .collection('users')
-        .doc(_userId!)
-        .collection('wishlist')
-        .doc(bookId)
-        .get();
-    return doc.exists;
-  }
-
-  /// Adds a book to the user's wishlist.
-  Future<void> addToWishlist(String bookId) async {
-    if (_userId == null) return;
-    await _firestore
-        .collection('users')
-        .doc(_userId!)
-        .collection('wishlist')
-        .doc(bookId)
-        .set({'addedAt': firestore.FieldValue.serverTimestamp()});
-  }
-
-  /// Removes a book from the user's wishlist.
-  Future<void> removeFromWishlist(String bookId) async {
-    if (_userId == null) return;
-    await _firestore
-        .collection('users')
-        .doc(_userId!)
-        .collection('wishlist')
-        .doc(bookId)
-        .delete();
-  }
-
-  /// Returns a stream of reviews for a book.
-  Stream<List<Map<String, dynamic>>> getBookReviews(String bookId) {
-    return _firestore
-        .collection('books')
-        .doc(bookId)
-        .collection('reviews')
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => {
-                  'id': doc.id,
-                  ...doc.data(),
-                })
-            .toList());
-  }
-
-  /// Adds a review to a book.
-  Future<void> addReview(String bookId, String text, double rating) async {
-    if (_userId == null) return;
-    await _firestore.collection('books').doc(bookId).collection('reviews').add({
-      'userId': _userId!,
-      'userName': 'Anonymous',
-      'text': text,
-      'rating': rating,
-      'timestamp': firestore.FieldValue.serverTimestamp(),
-      'likes': 0,
-    });
-  }
-
-  /// Likes a review.
-  Future<void> likeReview(String bookId, String reviewId) async {
-    if (_userId == null) return;
-    final reviewRef = _firestore
-        .collection('books')
-        .doc(bookId)
-        .collection('reviews')
-        .doc(reviewId);
-
-    final review = await reviewRef.get();
-    if (!review.exists) return;
-
-    final likedBy = List<String>.from(review.data()?['likedBy'] ?? []);
-    if (likedBy.contains(_userId!)) {
-      likedBy.remove(_userId!);
-      await reviewRef.update({
-        'likes': firestore.FieldValue.increment(-1),
-        'likedBy': likedBy,
-      });
-    } else {
-      likedBy.add(_userId!);
-      await reviewRef.update({
-        'likes': firestore.FieldValue.increment(1),
-        'likedBy': likedBy,
-      });
-    }
-  }
-
-  /// Returns a stream of bestseller books filtered by category.
-  Stream<List<Book>> getBestsellersFiltered({String? category}) {
-    return _bookService.getBooksStream().map((books) {
-      var filtered = books.where((book) => book.isBestseller).toList();
-      if (category != null) {
-        filtered =
-            filtered.where((book) => book.genres.contains(category)).toList();
-      }
-      return filtered;
-    });
-  }
-
-  /// Returns a stream of new arrival books filtered by category.
-  Stream<List<Book>> getNewArrivalsFiltered({String? category}) {
-    return _bookService.getBooksStream().map((books) {
-      var filtered = books.where((book) => book.isNewArrival).toList();
-      if (category != null) {
-        filtered =
-            filtered.where((book) => book.genres.contains(category)).toList();
-      }
-      return filtered;
-    });
-  }
-
   /// Resets the password for a user with the provided email.
   Future<void> resetPassword(String email) async {
     await _authService.resetPassword(email);
   }
 
-  /// Creates a payment intent with Stripe for the given amount.
-  // Stripe payment logic removed. No-op or mock logic can be added if needed.
+  /// Searches for books using Open Library API.
+  Future<void> searchBooks(String query) async {
+    try {
+      _isLoadingBooks = true;
+      _booksError = null;
+      notifyListeners();
+
+      if (query.trim().isEmpty) {
+        _books = await _openLibraryService.getDefaultBooks();
+      } else {
+        _books = await _openLibraryService.searchBooks(query);
+      }
+      // Set price and random rating for all books
+      final random = Random();
+      _books = _books.map((book) {
+        return Book(
+          id: book.id,
+          title: book.title,
+          author: book.author,
+          description: book.description,
+          coverImage: book.coverImage,
+          price: 5.0,
+          genres: book.genres,
+          stock: book.stock,
+          rating: 3.0 + random.nextDouble() * 2.0, // 3.0 to 5.0
+          reviewCount: book.reviewCount,
+          releaseDate: book.releaseDate,
+          isBestseller: book.isBestseller,
+          isNewArrival: book.isNewArrival,
+          isbn: book.isbn,
+          pageCount: book.pageCount,
+          status: book.status,
+          authors: book.authors,
+          categories: book.categories,
+        );
+      }).toList();
+    } catch (e) {
+      _booksError = e.toString();
+    } finally {
+      _isLoadingBooks = false;
+      notifyListeners();
+    }
+  }
+
+  /// Adds a book to the user's purchased books.
+  Future<void> addPurchasedBook(Book book) async {
+    if (_userId == null) return;
+
+    // Check if book is already purchased
+    if (_purchasedBooks.any((b) => b.id == book.id)) {
+      return; // Already purchased
+    }
+
+    _purchasedBooks.add(book);
+    notifyListeners();
+
+    // Save to persistent storage (local storage)
+    await _savePurchasedBooks();
+  }
+
+  /// Checks if a book is purchased by the user.
+  bool isBookPurchased(String bookId) {
+    return _purchasedBooks.any((book) => book.id == bookId);
+  }
+
+  /// Gets the list of purchased books.
+  List<Book> getPurchasedBooks() {
+    return _purchasedBooks;
+  }
+
+  /// Loads purchased books for the user.
+  Future<void> loadPurchasedBooks() async {
+    if (_userId == null) return;
+
+    await _loadPurchasedBooks();
+    notifyListeners();
+  }
+
+  /// Adds a book to the user's wishlist.
+  Future<void> addToWishlist(Book book) async {
+    if (_userId == null) return;
+
+    if (!_wishlist.any((b) => b.id == book.id)) {
+      _wishlist.add(book);
+      notifyListeners();
+      await _saveWishlist();
+    }
+  }
+
+  /// Removes a book from the user's wishlist.
+  Future<void> removeFromWishlist(String bookId) async {
+    if (_userId == null) return;
+
+    _wishlist.removeWhere((book) => book.id == bookId);
+    notifyListeners();
+    await _saveWishlist();
+  }
+
+  /// Checks if a book is in the user's wishlist.
+  bool isInWishlist(String bookId) {
+    return _wishlist.any((book) => book.id == bookId);
+  }
+
+  /// Loads wishlist for the user.
+  Future<void> loadWishlist() async {
+    if (_userId == null) return;
+
+    await _loadWishlist();
+    notifyListeners();
+  }
+
+  /// Adds a book to the user's favourites.
+  Future<void> addToFavourites(Book book) async {
+    if (_userId == null) return;
+
+    if (!_favourites.any((b) => b.id == book.id)) {
+      _favourites.add(book);
+      notifyListeners();
+      await _saveFavourites();
+    }
+  }
+
+  /// Removes a book from the user's favourites.
+  Future<void> removeFromFavourites(String bookId) async {
+    if (_userId == null) return;
+
+    _favourites.removeWhere((book) => book.id == bookId);
+    notifyListeners();
+    await _saveFavourites();
+  }
+
+  /// Checks if a book is in the user's favourites.
+  bool isInFavourites(String bookId) {
+    return _favourites.any((book) => book.id == bookId);
+  }
+
+  /// Loads favourites for the user.
+  Future<void> loadFavourites() async {
+    if (_userId == null) return;
+
+    await _loadFavourites();
+    notifyListeners();
+  }
+
+  /// Saves purchased books to local storage.
+  Future<void> _savePurchasedBooks() async {
+    if (_userId == null) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final purchasedBooksJson = _purchasedBooks
+          .map((book) => {
+                'id': book.id,
+                'title': book.title,
+                'author': book.author,
+                'description': book.description,
+                'coverImage': book.coverImage,
+                'price': book.price,
+                'genres': book.genres,
+                'stock': book.stock,
+                'rating': book.rating,
+                'reviewCount': book.reviewCount,
+                'releaseDate': book.releaseDate.toIso8601String(),
+                'isBestseller': book.isBestseller,
+                'isNewArrival': book.isNewArrival,
+                'isbn': book.isbn,
+                'pageCount': book.pageCount,
+                'status': book.status,
+              })
+          .toList();
+
+      await prefs.setString(
+          'purchased_books_$_userId', jsonEncode(purchasedBooksJson));
+    } catch (e) {
+      debugPrint('Error saving purchased books: $e');
+    }
+  }
+
+  /// Loads purchased books from local storage.
+  Future<void> _loadPurchasedBooks() async {
+    if (_userId == null) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final purchasedBooksString = prefs.getString('purchased_books_$_userId');
+
+      if (purchasedBooksString != null) {
+        final purchasedBooksJson = jsonDecode(purchasedBooksString) as List;
+        _purchasedBooks = purchasedBooksJson
+            .map((bookJson) => Book(
+                  id: bookJson['id'],
+                  title: bookJson['title'],
+                  author: bookJson['author'],
+                  description: bookJson['description'],
+                  coverImage: bookJson['coverImage'],
+                  price: bookJson['price'].toDouble(),
+                  genres: List<String>.from(bookJson['genres']),
+                  stock: bookJson['stock'],
+                  rating: bookJson['rating'].toDouble(),
+                  reviewCount: bookJson['reviewCount'],
+                  releaseDate: DateTime.parse(bookJson['releaseDate']),
+                  isBestseller: bookJson['isBestseller'],
+                  isNewArrival: bookJson['isNewArrival'],
+                  isbn: bookJson['isbn'],
+                  pageCount: bookJson['pageCount'],
+                  status: bookJson['status'],
+                ))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Error loading purchased books: $e');
+      _purchasedBooks = [];
+    }
+  }
+
+  /// Saves wishlist to local storage.
+  Future<void> _saveWishlist() async {
+    if (_userId == null) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final wishlistJson = _wishlist
+          .map((book) => {
+                'id': book.id,
+                'title': book.title,
+                'author': book.author,
+                'description': book.description,
+                'coverImage': book.coverImage,
+                'price': book.price,
+                'genres': book.genres,
+                'stock': book.stock,
+                'rating': book.rating,
+                'reviewCount': book.reviewCount,
+                'releaseDate': book.releaseDate.toIso8601String(),
+                'isBestseller': book.isBestseller,
+                'isNewArrival': book.isNewArrival,
+                'isbn': book.isbn,
+                'pageCount': book.pageCount,
+                'status': book.status,
+              })
+          .toList();
+
+      await prefs.setString('wishlist_$_userId', jsonEncode(wishlistJson));
+    } catch (e) {
+      debugPrint('Error saving wishlist: $e');
+    }
+  }
+
+  /// Loads wishlist from local storage.
+  Future<void> _loadWishlist() async {
+    if (_userId == null) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final wishlistString = prefs.getString('wishlist_$_userId');
+
+      if (wishlistString != null) {
+        final wishlistJson = jsonDecode(wishlistString) as List;
+        _wishlist = wishlistJson
+            .map((bookJson) => Book(
+                  id: bookJson['id'],
+                  title: bookJson['title'],
+                  author: bookJson['author'],
+                  description: bookJson['description'],
+                  coverImage: bookJson['coverImage'],
+                  price: bookJson['price'].toDouble(),
+                  genres: List<String>.from(bookJson['genres']),
+                  stock: bookJson['stock'],
+                  rating: bookJson['rating'].toDouble(),
+                  reviewCount: bookJson['reviewCount'],
+                  releaseDate: DateTime.parse(bookJson['releaseDate']),
+                  isBestseller: bookJson['isBestseller'],
+                  isNewArrival: bookJson['isNewArrival'],
+                  isbn: bookJson['isbn'],
+                  pageCount: bookJson['pageCount'],
+                  status: bookJson['status'],
+                ))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Error loading wishlist: $e');
+      _wishlist = [];
+    }
+  }
+
+  /// Saves favourites to local storage.
+  Future<void> _saveFavourites() async {
+    if (_userId == null) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final favouritesJson = _favourites
+          .map((book) => {
+                'id': book.id,
+                'title': book.title,
+                'author': book.author,
+                'description': book.description,
+                'coverImage': book.coverImage,
+                'price': book.price,
+                'genres': book.genres,
+                'stock': book.stock,
+                'rating': book.rating,
+                'reviewCount': book.reviewCount,
+                'releaseDate': book.releaseDate.toIso8601String(),
+                'isBestseller': book.isBestseller,
+                'isNewArrival': book.isNewArrival,
+                'isbn': book.isbn,
+                'pageCount': book.pageCount,
+                'status': book.status,
+              })
+          .toList();
+
+      await prefs.setString('favourites_$_userId', jsonEncode(favouritesJson));
+    } catch (e) {
+      debugPrint('Error saving favourites: $e');
+    }
+  }
+
+  /// Loads favourites from local storage.
+  Future<void> _loadFavourites() async {
+    if (_userId == null) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final favouritesString = prefs.getString('favourites_$_userId');
+
+      if (favouritesString != null) {
+        final favouritesJson = jsonDecode(favouritesString) as List;
+        _favourites = favouritesJson
+            .map((bookJson) => Book(
+                  id: bookJson['id'],
+                  title: bookJson['title'],
+                  author: bookJson['author'],
+                  description: bookJson['description'],
+                  coverImage: bookJson['coverImage'],
+                  price: bookJson['price'].toDouble(),
+                  genres: List<String>.from(bookJson['genres']),
+                  stock: bookJson['stock'],
+                  rating: bookJson['rating'].toDouble(),
+                  reviewCount: bookJson['reviewCount'],
+                  releaseDate: DateTime.parse(bookJson['releaseDate']),
+                  isBestseller: bookJson['isBestseller'],
+                  isNewArrival: bookJson['isNewArrival'],
+                  isbn: bookJson['isbn'],
+                  pageCount: bookJson['pageCount'],
+                  status: bookJson['status'],
+                ))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Error loading favourites: $e');
+      _favourites = [];
+    }
+  }
 }

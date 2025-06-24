@@ -4,23 +4,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/book.dart';
 
-class WishlistProvider with ChangeNotifier {
-  List<Book> _wishlist = [];
+class FavouritesProvider with ChangeNotifier {
+  List<Book> _favourites = [];
   bool _isLoading = false;
   String? _error;
 
-  List<Book> get wishlist => _wishlist;
+  List<Book> get favourites => _favourites;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Load wishlist
-  Future<void> loadWishlist(String userId) async {
+  // Load favourites
+  Future<void> loadFavourites(String userId) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      await _loadWishlistFromStorage(userId);
+      await _loadFavouritesFromStorage(userId);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -29,16 +29,16 @@ class WishlistProvider with ChangeNotifier {
     }
   }
 
-  // Add to wishlist
-  Future<void> addToWishlist(String userId, Book book) async {
+  // Add to favourites
+  Future<void> addToFavourites(String userId, Book book) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      if (!_wishlist.any((b) => b.id == book.id)) {
-        _wishlist.add(book);
-        await _saveWishlistToStorage(userId);
+      if (!_favourites.any((b) => b.id == book.id)) {
+        _favourites.add(book);
+        await _saveFavouritesToStorage(userId);
       }
     } catch (e) {
       _error = e.toString();
@@ -48,15 +48,15 @@ class WishlistProvider with ChangeNotifier {
     }
   }
 
-  // Remove from wishlist
-  Future<void> removeFromWishlist(String userId, String bookId) async {
+  // Remove from favourites
+  Future<void> removeFromFavourites(String userId, String bookId) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      _wishlist.removeWhere((book) => book.id == bookId);
-      await _saveWishlistToStorage(userId);
+      _favourites.removeWhere((book) => book.id == bookId);
+      await _saveFavouritesToStorage(userId);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -65,9 +65,9 @@ class WishlistProvider with ChangeNotifier {
     }
   }
 
-  // Check if book is in wishlist
-  bool isInWishlist(String bookId) {
-    return _wishlist.any((book) => book.id == bookId);
+  // Check if book is in favourites
+  bool isInFavourites(String bookId) {
+    return _favourites.any((book) => book.id == bookId);
   }
 
   // Clear error
@@ -76,11 +76,11 @@ class WishlistProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Save wishlist to local storage
-  Future<void> _saveWishlistToStorage(String userId) async {
+  // Save favourites to local storage
+  Future<void> _saveFavouritesToStorage(String userId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final wishlistJson = _wishlist
+      final favouritesJson = _favourites
           .map((book) => {
                 'id': book.id,
                 'title': book.title,
@@ -100,21 +100,21 @@ class WishlistProvider with ChangeNotifier {
                 'status': book.status,
               })
           .toList();
-      await prefs.setString('wishlist_$userId', jsonEncode(wishlistJson));
+      await prefs.setString('favourites_$userId', jsonEncode(favouritesJson));
     } catch (e) {
-      debugPrint('Error saving wishlist: $e');
+      debugPrint('Error saving favourites: $e');
     }
   }
 
-  // Load wishlist from local storage
-  Future<void> _loadWishlistFromStorage(String userId) async {
+  // Load favourites from local storage
+  Future<void> _loadFavouritesFromStorage(String userId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final wishlistString = prefs.getString('wishlist_$userId');
+      final favouritesString = prefs.getString('favourites_$userId');
 
-      if (wishlistString != null) {
-        final wishlistJson = jsonDecode(wishlistString) as List;
-        _wishlist = wishlistJson
+      if (favouritesString != null) {
+        final favouritesJson = jsonDecode(favouritesString) as List;
+        _favourites = favouritesJson
             .map((bookJson) => Book(
                   id: bookJson['id'],
                   title: bookJson['title'],
@@ -136,8 +136,8 @@ class WishlistProvider with ChangeNotifier {
             .toList();
       }
     } catch (e) {
-      debugPrint('Error loading wishlist: $e');
-      _wishlist = [];
+      debugPrint('Error loading favourites: $e');
+      _favourites = [];
     }
   }
 }
