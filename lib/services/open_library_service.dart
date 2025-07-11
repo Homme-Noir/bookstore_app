@@ -89,6 +89,51 @@ class OpenLibraryService {
         case 'cooking':
           query = 'cooking food recipes';
           break;
+        case 'technology':
+          query = 'technology computer science programming';
+          break;
+        case 'philosophy':
+          query = 'philosophy ethics metaphysics';
+          break;
+        case 'psychology':
+          query = 'psychology mental health behavior';
+          break;
+        case 'travel':
+          query = 'travel guide tourism adventure';
+          break;
+        case 'art':
+          query = 'art painting sculpture design';
+          break;
+        case 'music':
+          query = 'music musicians composers';
+          break;
+        case 'poetry':
+          query = 'poetry poems verse';
+          break;
+        case 'children':
+          query = 'children kids picture books';
+          break;
+        case 'young adult':
+          query = 'young adult teen fiction';
+          break;
+        case 'thriller':
+          query = 'thriller suspense tension';
+          break;
+        case 'horror':
+          query = 'horror scary supernatural';
+          break;
+        case 'comedy':
+          query = 'comedy humor funny';
+          break;
+        case 'drama':
+          query = 'drama theatrical plays';
+          break;
+        case 'adventure':
+          query = 'adventure exploration journey';
+          break;
+        case 'classic literature':
+          query = 'classic literature classics';
+          break;
         default:
           query = category;
       }

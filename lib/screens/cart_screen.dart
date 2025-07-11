@@ -176,14 +176,16 @@ class _CartItemCard extends StatelessWidget {
             // Remove button
             IconButton(
               onPressed: () {
-                context.read<CartProvider>().removeFromCart(book.id);
+                context.read<CartProvider>().removeFromCart(
+                    context.read<AppProvider>().userId!, book.id);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('${book.title} removed from cart'),
                     action: SnackBarAction(
                       label: 'Undo',
                       onPressed: () {
-                        context.read<CartProvider>().addToCart(book);
+                        context.read<CartProvider>().addToCart(
+                            context.read<AppProvider>().userId!, book);
                       },
                     ),
                   ),
@@ -308,6 +310,8 @@ class _CartSummary extends StatelessWidget {
     final appProvider = context.read<AppProvider>();
     final cartProvider = context.read<CartProvider>();
     final profileProvider = context.read<ProfileProvider>();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
     // Store cart items before clearing
     final itemsToPurchase = List<Book>.from(cartProvider.cartItems);
@@ -338,41 +342,34 @@ class _CartSummary extends StatelessWidget {
       }
 
       // Add order to profile history
-      await profileProvider.addOrder(itemsToPurchase, totalAmount);
+      await profileProvider.addOrder(
+          appProvider.userId!, itemsToPurchase, totalAmount);
 
       // Clear cart
-      await cartProvider.clearCart();
+      await cartProvider.clearCart(appProvider.userId!);
 
       // Show success message
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Purchase successful! ${itemsToPurchase.length} books added to your library.',
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Purchase successful! ${itemsToPurchase.length} books added to your library.',
           ),
-        );
-      }
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error processing purchase: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Error processing purchase: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       // Close loading dialog
-      if (context.mounted) {
-        Navigator.of(context).pop();
-      }
+      navigator.pop();
       // Navigate back to main screen
-      if (context.mounted) {
-        Navigator.of(context).pop();
-      }
+      navigator.pop();
     }
   }
 }

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import '../models/book.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class FavouritesProvider with ChangeNotifier {
   List<Book> _favourites = [];
@@ -13,14 +12,37 @@ class FavouritesProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Load favourites
+  // Load favourites from Supabase
   Future<void> loadFavourites(String userId) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      await _loadFavouritesFromStorage(userId);
+      final data = await Supabase.instance.client
+          .from('favourites')
+          .select('book_id')
+          .eq('user_id', userId);
+      final bookIds =
+          (data as List).map((e) => e['book_id'] as String).toList();
+      _favourites = bookIds
+          .map((id) => Book(
+              id: id,
+              title: '',
+              author: '',
+              description: '',
+              coverImage: '',
+              price: 0.0,
+              genres: [],
+              stock: 0,
+              rating: 0.0,
+              reviewCount: 0,
+              releaseDate: DateTime.now(),
+              isBestseller: false,
+              isNewArrival: false,
+              isbn: '',
+              pageCount: 0))
+          .toList();
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -29,7 +51,7 @@ class FavouritesProvider with ChangeNotifier {
     }
   }
 
-  // Add to favourites
+  // Add to favourites in Supabase
   Future<void> addToFavourites(String userId, Book book) async {
     try {
       _isLoading = true;
@@ -37,8 +59,10 @@ class FavouritesProvider with ChangeNotifier {
       notifyListeners();
 
       if (!_favourites.any((b) => b.id == book.id)) {
+        await Supabase.instance.client
+            .from('favourites')
+            .insert({'user_id': userId, 'book_id': book.id});
         _favourites.add(book);
-        await _saveFavouritesToStorage(userId);
       }
     } catch (e) {
       _error = e.toString();
@@ -48,15 +72,19 @@ class FavouritesProvider with ChangeNotifier {
     }
   }
 
-  // Remove from favourites
+  // Remove from favourites in Supabase
   Future<void> removeFromFavourites(String userId, String bookId) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
+      await Supabase.instance.client
+          .from('favourites')
+          .delete()
+          .eq('user_id', userId)
+          .eq('book_id', bookId);
       _favourites.removeWhere((book) => book.id == bookId);
-      await _saveFavouritesToStorage(userId);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -74,70 +102,5 @@ class FavouritesProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
-  }
-
-  // Save favourites to local storage
-  Future<void> _saveFavouritesToStorage(String userId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final favouritesJson = _favourites
-          .map((book) => {
-                'id': book.id,
-                'title': book.title,
-                'author': book.author,
-                'description': book.description,
-                'coverImage': book.coverImage,
-                'price': book.price,
-                'genres': book.genres,
-                'stock': book.stock,
-                'rating': book.rating,
-                'reviewCount': book.reviewCount,
-                'releaseDate': book.releaseDate.toIso8601String(),
-                'isBestseller': book.isBestseller,
-                'isNewArrival': book.isNewArrival,
-                'isbn': book.isbn,
-                'pageCount': book.pageCount,
-                'status': book.status,
-              })
-          .toList();
-      await prefs.setString('favourites_$userId', jsonEncode(favouritesJson));
-    } catch (e) {
-      debugPrint('Error saving favourites: $e');
-    }
-  }
-
-  // Load favourites from local storage
-  Future<void> _loadFavouritesFromStorage(String userId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final favouritesString = prefs.getString('favourites_$userId');
-
-      if (favouritesString != null) {
-        final favouritesJson = jsonDecode(favouritesString) as List;
-        _favourites = favouritesJson
-            .map((bookJson) => Book(
-                  id: bookJson['id'],
-                  title: bookJson['title'],
-                  author: bookJson['author'],
-                  description: bookJson['description'],
-                  coverImage: bookJson['coverImage'],
-                  price: bookJson['price'].toDouble(),
-                  genres: List<String>.from(bookJson['genres']),
-                  stock: bookJson['stock'],
-                  rating: bookJson['rating'].toDouble(),
-                  reviewCount: bookJson['reviewCount'],
-                  releaseDate: DateTime.parse(bookJson['releaseDate']),
-                  isBestseller: bookJson['isBestseller'],
-                  isNewArrival: bookJson['isNewArrival'],
-                  isbn: bookJson['isbn'],
-                  pageCount: bookJson['pageCount'],
-                  status: bookJson['status'],
-                ))
-            .toList();
-      }
-    } catch (e) {
-      debugPrint('Error loading favourites: $e');
-      _favourites = [];
-    }
   }
 }

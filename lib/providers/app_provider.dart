@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/open_library_service.dart';
 import '../models/book.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import 'dart:math';
 
 /// A provider class that manages the application state and services.
@@ -16,6 +14,8 @@ class AppProvider extends ChangeNotifier {
 
   /// The current user of the application.
   String? _userId;
+
+  String? _email;
 
   /// The list of books from Open Library.
   List<Book> _books = [];
@@ -77,8 +77,8 @@ class AppProvider extends ChangeNotifier {
 
   /// Initializes the provider by setting up listeners for user changes and loading initial data.
   Future<void> _init() async {
-    _authService.onAuthStateChanged.listen((user) {
-      _userId = user?['uid'];
+    _authService.onAuthStateChanged.listen((authState) {
+      _userId = authState.session?.user.id;
       if (_userId != null) {
         _loadUserData();
       } else {
@@ -128,6 +128,21 @@ class AppProvider extends ChangeNotifier {
         'Self-Help',
         'Business',
         'Cooking',
+        'Technology',
+        'Philosophy',
+        'Psychology',
+        'Travel',
+        'Art',
+        'Music',
+        'Poetry',
+        'Children',
+        'Young Adult',
+        'Thriller',
+        'Horror',
+        'Comedy',
+        'Drama',
+        'Adventure',
+        'Classic Literature',
       ];
 
       _booksByCategory.clear();
@@ -208,6 +223,8 @@ class AppProvider extends ChangeNotifier {
   /// Returns the current user.
   String? get userId => _userId;
 
+  String? get email => _email;
+
   /// Returns the list of books.
   List<Book> get books => _books;
 
@@ -232,6 +249,20 @@ class AppProvider extends ChangeNotifier {
   /// Resets the password for a user with the provided email.
   Future<void> resetPassword(String email) async {
     await _authService.resetPassword(email);
+  }
+
+  /// Signs in a user with Google (fake implementation for demo)
+  Future<void> signInWithGoogle() async {
+    // Simulate loading
+    await Future.delayed(const Duration(seconds: 2));
+
+    // Create a fake user session
+    _userId = 'google_user_${DateTime.now().millisecondsSinceEpoch}';
+    _email = 'demo.user@gmail.com';
+
+    // Load user data
+    await _loadUserData();
+    notifyListeners();
   }
 
   /// Searches for books using Open Library API.
@@ -289,9 +320,6 @@ class AppProvider extends ChangeNotifier {
 
     _purchasedBooks.add(book);
     notifyListeners();
-
-    // Save to persistent storage (local storage)
-    await _savePurchasedBooks();
   }
 
   /// Checks if a book is purchased by the user.
@@ -308,7 +336,23 @@ class AppProvider extends ChangeNotifier {
   Future<void> loadPurchasedBooks() async {
     if (_userId == null) return;
 
-    await _loadPurchasedBooks();
+    // Supabase logic for loading purchased books
+    // This part needs to be implemented based on your Supabase client
+    // For now, we'll just return an empty list or throw an error
+    // as the local storage logic is removed.
+    // Example:
+    // final supabase = Supabase.instance.client;
+    // final { data, error } = await supabase
+    //   .from('purchased_books')
+    //   .select('*')
+    //   .eq('user_id', _userId);
+    // if (error != null) {
+    //   debugPrint('Error loading purchased books: ${error.message}');
+    //   _purchasedBooks = [];
+    // } else {
+    //   _purchasedBooks = (data as List).map((item) => Book.fromJson(item)).toList();
+    // }
+    _purchasedBooks = []; // Placeholder
     notifyListeners();
   }
 
@@ -319,7 +363,35 @@ class AppProvider extends ChangeNotifier {
     if (!_wishlist.any((b) => b.id == book.id)) {
       _wishlist.add(book);
       notifyListeners();
-      await _saveWishlist();
+      // Supabase logic for saving wishlist
+      // This part needs to be implemented based on your Supabase client
+      // For now, we'll just print a message
+      // Example:
+      // final supabase = Supabase.instance.client;
+      // final { error } = await supabase
+      //   .from('wishlist')
+      //   .insert({
+      //     'user_id': _userId,
+      //     'book_id': book.id,
+      //     'title': book.title,
+      //     'author': book.author,
+      //     'description': book.description,
+      //     'cover_image': book.coverImage,
+      //     'price': book.price,
+      //     'genres': book.genres,
+      //     'stock': book.stock,
+      //     'rating': book.rating,
+      //     'review_count': book.reviewCount,
+      //     'release_date': book.releaseDate.toIso8601String(),
+      //     'is_bestseller': book.isBestseller,
+      //     'is_new_arrival': book.isNewArrival,
+      //     'isbn': book.isbn,
+      //     'page_count': book.pageCount,
+      //     'status': book.status,
+      //   });
+      // if (error != null) {
+      //   debugPrint('Error saving wishlist: ${error.message}');
+      // }
     }
   }
 
@@ -329,7 +401,19 @@ class AppProvider extends ChangeNotifier {
 
     _wishlist.removeWhere((book) => book.id == bookId);
     notifyListeners();
-    await _saveWishlist();
+    // Supabase logic for removing wishlist
+    // This part needs to be implemented based on your Supabase client
+    // For now, we'll just print a message
+    // Example:
+    // final supabase = Supabase.instance.client;
+    // final { error } = await supabase
+    //   .from('wishlist')
+    //   .delete()
+    //   .eq('user_id', _userId)
+    //   .eq('book_id', bookId);
+    // if (error != null) {
+    //   debugPrint('Error removing wishlist: ${error.message}');
+    // }
   }
 
   /// Checks if a book is in the user's wishlist.
@@ -341,7 +425,23 @@ class AppProvider extends ChangeNotifier {
   Future<void> loadWishlist() async {
     if (_userId == null) return;
 
-    await _loadWishlist();
+    // Supabase logic for loading wishlist
+    // This part needs to be implemented based on your Supabase client
+    // For now, we'll just return an empty list or throw an error
+    // as the local storage logic is removed.
+    // Example:
+    // final supabase = Supabase.instance.client;
+    // final { data, error } = await supabase
+    //   .from('wishlist')
+    //   .select('*')
+    //   .eq('user_id', _userId);
+    // if (error != null) {
+    //   debugPrint('Error loading wishlist: ${error.message}');
+    //   _wishlist = [];
+    // } else {
+    //   _wishlist = (data as List).map((item) => Book.fromJson(item)).toList();
+    // }
+    _wishlist = []; // Placeholder
     notifyListeners();
   }
 
@@ -352,7 +452,35 @@ class AppProvider extends ChangeNotifier {
     if (!_favourites.any((b) => b.id == book.id)) {
       _favourites.add(book);
       notifyListeners();
-      await _saveFavourites();
+      // Supabase logic for saving favourites
+      // This part needs to be implemented based on your Supabase client
+      // For now, we'll just print a message
+      // Example:
+      // final supabase = Supabase.instance.client;
+      // final { error } = await supabase
+      //   .from('favourites')
+      //   .insert({
+      //     'user_id': _userId,
+      //     'book_id': book.id,
+      //     'title': book.title,
+      //     'author': book.author,
+      //     'description': book.description,
+      //     'cover_image': book.coverImage,
+      //     'price': book.price,
+      //     'genres': book.genres,
+      //     'stock': book.stock,
+      //     'rating': book.rating,
+      //     'review_count': book.reviewCount,
+      //     'release_date': book.releaseDate.toIso8601String(),
+      //     'is_bestseller': book.isBestseller,
+      //     'is_new_arrival': book.isNewArrival,
+      //     'isbn': book.isbn,
+      //     'page_count': book.pageCount,
+      //     'status': book.status,
+      //   });
+      // if (error != null) {
+      //   debugPrint('Error saving favourites: ${error.message}');
+      // }
     }
   }
 
@@ -362,7 +490,19 @@ class AppProvider extends ChangeNotifier {
 
     _favourites.removeWhere((book) => book.id == bookId);
     notifyListeners();
-    await _saveFavourites();
+    // Supabase logic for removing favourites
+    // This part needs to be implemented based on your Supabase client
+    // For now, we'll just print a message
+    // Example:
+    // final supabase = Supabase.instance.client;
+    // final { error } = await supabase
+    //   .from('favourites')
+    //   .delete()
+    //   .eq('user_id', _userId)
+    //   .eq('book_id', bookId);
+    // if (error != null) {
+    //   debugPrint('Error removing favourites: ${error.message}');
+    // }
   }
 
   /// Checks if a book is in the user's favourites.
@@ -374,218 +514,23 @@ class AppProvider extends ChangeNotifier {
   Future<void> loadFavourites() async {
     if (_userId == null) return;
 
-    await _loadFavourites();
+    // Supabase logic for loading favourites
+    // This part needs to be implemented based on your Supabase client
+    // For now, we'll just return an empty list or throw an error
+    // as the local storage logic is removed.
+    // Example:
+    // final supabase = Supabase.instance.client;
+    // final { data, error } = await supabase
+    //   .from('favourites')
+    //   .select('*')
+    //   .eq('user_id', _userId);
+    // if (error != null) {
+    //   debugPrint('Error loading favourites: ${error.message}');
+    //   _favourites = [];
+    // } else {
+    //   _favourites = (data as List).map((item) => Book.fromJson(item)).toList();
+    // }
+    _favourites = []; // Placeholder
     notifyListeners();
-  }
-
-  /// Saves purchased books to local storage.
-  Future<void> _savePurchasedBooks() async {
-    if (_userId == null) return;
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final purchasedBooksJson = _purchasedBooks
-          .map((book) => {
-                'id': book.id,
-                'title': book.title,
-                'author': book.author,
-                'description': book.description,
-                'coverImage': book.coverImage,
-                'price': book.price,
-                'genres': book.genres,
-                'stock': book.stock,
-                'rating': book.rating,
-                'reviewCount': book.reviewCount,
-                'releaseDate': book.releaseDate.toIso8601String(),
-                'isBestseller': book.isBestseller,
-                'isNewArrival': book.isNewArrival,
-                'isbn': book.isbn,
-                'pageCount': book.pageCount,
-                'status': book.status,
-              })
-          .toList();
-
-      await prefs.setString(
-          'purchased_books_$_userId', jsonEncode(purchasedBooksJson));
-    } catch (e) {
-      debugPrint('Error saving purchased books: $e');
-    }
-  }
-
-  /// Loads purchased books from local storage.
-  Future<void> _loadPurchasedBooks() async {
-    if (_userId == null) return;
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final purchasedBooksString = prefs.getString('purchased_books_$_userId');
-
-      if (purchasedBooksString != null) {
-        final purchasedBooksJson = jsonDecode(purchasedBooksString) as List;
-        _purchasedBooks = purchasedBooksJson
-            .map((bookJson) => Book(
-                  id: bookJson['id'],
-                  title: bookJson['title'],
-                  author: bookJson['author'],
-                  description: bookJson['description'],
-                  coverImage: bookJson['coverImage'],
-                  price: bookJson['price'].toDouble(),
-                  genres: List<String>.from(bookJson['genres']),
-                  stock: bookJson['stock'],
-                  rating: bookJson['rating'].toDouble(),
-                  reviewCount: bookJson['reviewCount'],
-                  releaseDate: DateTime.parse(bookJson['releaseDate']),
-                  isBestseller: bookJson['isBestseller'],
-                  isNewArrival: bookJson['isNewArrival'],
-                  isbn: bookJson['isbn'],
-                  pageCount: bookJson['pageCount'],
-                  status: bookJson['status'],
-                ))
-            .toList();
-      }
-    } catch (e) {
-      debugPrint('Error loading purchased books: $e');
-      _purchasedBooks = [];
-    }
-  }
-
-  /// Saves wishlist to local storage.
-  Future<void> _saveWishlist() async {
-    if (_userId == null) return;
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final wishlistJson = _wishlist
-          .map((book) => {
-                'id': book.id,
-                'title': book.title,
-                'author': book.author,
-                'description': book.description,
-                'coverImage': book.coverImage,
-                'price': book.price,
-                'genres': book.genres,
-                'stock': book.stock,
-                'rating': book.rating,
-                'reviewCount': book.reviewCount,
-                'releaseDate': book.releaseDate.toIso8601String(),
-                'isBestseller': book.isBestseller,
-                'isNewArrival': book.isNewArrival,
-                'isbn': book.isbn,
-                'pageCount': book.pageCount,
-                'status': book.status,
-              })
-          .toList();
-
-      await prefs.setString('wishlist_$_userId', jsonEncode(wishlistJson));
-    } catch (e) {
-      debugPrint('Error saving wishlist: $e');
-    }
-  }
-
-  /// Loads wishlist from local storage.
-  Future<void> _loadWishlist() async {
-    if (_userId == null) return;
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final wishlistString = prefs.getString('wishlist_$_userId');
-
-      if (wishlistString != null) {
-        final wishlistJson = jsonDecode(wishlistString) as List;
-        _wishlist = wishlistJson
-            .map((bookJson) => Book(
-                  id: bookJson['id'],
-                  title: bookJson['title'],
-                  author: bookJson['author'],
-                  description: bookJson['description'],
-                  coverImage: bookJson['coverImage'],
-                  price: bookJson['price'].toDouble(),
-                  genres: List<String>.from(bookJson['genres']),
-                  stock: bookJson['stock'],
-                  rating: bookJson['rating'].toDouble(),
-                  reviewCount: bookJson['reviewCount'],
-                  releaseDate: DateTime.parse(bookJson['releaseDate']),
-                  isBestseller: bookJson['isBestseller'],
-                  isNewArrival: bookJson['isNewArrival'],
-                  isbn: bookJson['isbn'],
-                  pageCount: bookJson['pageCount'],
-                  status: bookJson['status'],
-                ))
-            .toList();
-      }
-    } catch (e) {
-      debugPrint('Error loading wishlist: $e');
-      _wishlist = [];
-    }
-  }
-
-  /// Saves favourites to local storage.
-  Future<void> _saveFavourites() async {
-    if (_userId == null) return;
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final favouritesJson = _favourites
-          .map((book) => {
-                'id': book.id,
-                'title': book.title,
-                'author': book.author,
-                'description': book.description,
-                'coverImage': book.coverImage,
-                'price': book.price,
-                'genres': book.genres,
-                'stock': book.stock,
-                'rating': book.rating,
-                'reviewCount': book.reviewCount,
-                'releaseDate': book.releaseDate.toIso8601String(),
-                'isBestseller': book.isBestseller,
-                'isNewArrival': book.isNewArrival,
-                'isbn': book.isbn,
-                'pageCount': book.pageCount,
-                'status': book.status,
-              })
-          .toList();
-
-      await prefs.setString('favourites_$_userId', jsonEncode(favouritesJson));
-    } catch (e) {
-      debugPrint('Error saving favourites: $e');
-    }
-  }
-
-  /// Loads favourites from local storage.
-  Future<void> _loadFavourites() async {
-    if (_userId == null) return;
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final favouritesString = prefs.getString('favourites_$_userId');
-
-      if (favouritesString != null) {
-        final favouritesJson = jsonDecode(favouritesString) as List;
-        _favourites = favouritesJson
-            .map((bookJson) => Book(
-                  id: bookJson['id'],
-                  title: bookJson['title'],
-                  author: bookJson['author'],
-                  description: bookJson['description'],
-                  coverImage: bookJson['coverImage'],
-                  price: bookJson['price'].toDouble(),
-                  genres: List<String>.from(bookJson['genres']),
-                  stock: bookJson['stock'],
-                  rating: bookJson['rating'].toDouble(),
-                  reviewCount: bookJson['reviewCount'],
-                  releaseDate: DateTime.parse(bookJson['releaseDate']),
-                  isBestseller: bookJson['isBestseller'],
-                  isNewArrival: bookJson['isNewArrival'],
-                  isbn: bookJson['isbn'],
-                  pageCount: bookJson['pageCount'],
-                  status: bookJson['status'],
-                ))
-            .toList();
-      }
-    } catch (e) {
-      debugPrint('Error loading favourites: $e');
-      _favourites = [];
-    }
   }
 }

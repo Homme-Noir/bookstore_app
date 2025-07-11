@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import 'providers/app_provider.dart';
 import 'providers/cart_provider.dart';
@@ -15,24 +15,20 @@ import 'screens/store_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
 import 'services/auth_service.dart';
 import 'services/open_library_service.dart';
-import 'firebase_options/firebase_options.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    debugPrint('Firebase initialized successfully');
-    runApp(const MyApp());
-  } catch (e) {
-    debugPrint('Error initializing Firebase: $e');
-    runApp(const FirebaseInitErrorApp());
-  }
+  await Supabase.initialize(
+    url: 'https://alzdwsarjfdpnidlczwv.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsemR3c2FyamZkcG5pZGxjend2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1OTAxNzEsImV4cCI6MjA2NzE2NjE3MX0.RCwZGoB_Jvx1PZpRuPvApdCnQQ1op3qIuyJuF7UT-c0',
+  );
+  runApp(const MyApp());
 }
 
+// Get a reference your Supabase client
+final supabase = Supabase.instance.client;
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -67,26 +63,6 @@ class MyApp extends StatelessWidget {
           '/profile': (context) => const ProfileScreen(),
           '/admin': (context) => const AdminDashboardScreen(),
         },
-      ),
-    );
-  }
-}
-
-class FirebaseInitErrorApp extends StatelessWidget {
-  const FirebaseInitErrorApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: Center(
-          child: Text(
-            'Error initializing Firebase.\nPlease check your configuration.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18, color: Colors.red),
-          ),
-        ),
       ),
     );
   }

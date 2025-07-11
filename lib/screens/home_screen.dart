@@ -38,7 +38,9 @@ class _MainAppScreenState extends State<MainAppScreen> {
     // Load books when the app starts
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppProvider>().loadBooks();
-      context.read<CartProvider>().loadCart();
+      context
+          .read<CartProvider>()
+          .loadCart(context.read<AppProvider>().userId!);
     });
   }
 
@@ -46,7 +48,7 @@ class _MainAppScreenState extends State<MainAppScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Book Store'),
+        title: const Text('Book App'),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         actions: [
@@ -231,7 +233,7 @@ class HomeTab extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Welcome to Book Store',
+                'Welcome to Book App',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -240,7 +242,7 @@ class HomeTab extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Your personal library management app',
+                'Your personal library',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey,
@@ -656,7 +658,8 @@ void showBookDetailsDialog(BuildContext context, Book book) {
             onPressed: isInCart
                 ? null
                 : () async {
-                    await cartProvider.addToCart(book);
+                    await cartProvider.addToCart(
+                        context.read<AppProvider>().userId!, book);
                     if (context.mounted) {
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(

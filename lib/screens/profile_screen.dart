@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/profile_provider.dart';
 import '../models/book.dart';
+import '../providers/app_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -19,7 +20,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProfileProvider>().loadProfile();
+      context
+          .read<ProfileProvider>()
+          .loadProfile(context.read<AppProvider>().userId!);
     });
   }
 
@@ -182,15 +185,16 @@ class _AccountTab extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () async {
                       if (formKey.currentState!.validate()) {
-                        await profileProvider
-                            .updateDisplayName(displayNameController.text);
-                        await profileProvider.updateEmail(emailController.text);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Profile updated successfully!')),
-                          );
-                        }
+                        final scaffoldMessenger = ScaffoldMessenger.of(context);
+                        final userId = context.read<AppProvider>().userId!;
+                        await profileProvider.updateDisplayName(
+                            userId, displayNameController.text);
+                        await profileProvider.updateEmail(
+                            userId, emailController.text);
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                              content: Text('Profile updated successfully!')),
+                        );
                       }
                     },
                     style: ElevatedButton.styleFrom(

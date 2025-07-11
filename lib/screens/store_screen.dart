@@ -263,6 +263,9 @@ class _BookCard extends StatelessWidget {
                         Consumer<CartProvider>(
                           builder: (context, cartProvider, child) {
                             final isInCart = cartProvider.isInCart(book.id);
+                            final isAuthenticated =
+                                context.read<AppProvider>().isAuthenticated;
+
                             return IconButton(
                               icon: Icon(
                                 isInCart
@@ -272,8 +275,15 @@ class _BookCard extends StatelessWidget {
                                 color: isInCart ? Colors.green : Colors.grey,
                               ),
                               onPressed: () {
+                                if (!isAuthenticated) {
+                                  _showSignInDialog(context);
+                                  return;
+                                }
+
                                 if (isInCart) {
-                                  cartProvider.removeFromCart(book.id);
+                                  cartProvider.removeFromCart(
+                                      context.read<AppProvider>().userId!,
+                                      book.id);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text('Removed from cart'),
@@ -281,7 +291,9 @@ class _BookCard extends StatelessWidget {
                                     ),
                                   );
                                 } else {
-                                  cartProvider.addToCart(book);
+                                  cartProvider.addToCart(
+                                      context.read<AppProvider>().userId!,
+                                      book);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text('Added to cart'),
@@ -376,8 +388,18 @@ class _BookCard extends StatelessWidget {
                         final isInCart = cartProvider.isInCart(book.id);
                         return ElevatedButton(
                           onPressed: () {
+                            final isAuthenticated =
+                                context.read<AppProvider>().isAuthenticated;
+
+                            if (!isAuthenticated) {
+                              Navigator.of(context).pop();
+                              _showSignInDialog(context);
+                              return;
+                            }
+
                             if (isInCart) {
-                              cartProvider.removeFromCart(book.id);
+                              cartProvider.removeFromCart(
+                                  context.read<AppProvider>().userId!, book.id);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Removed from cart'),
@@ -385,7 +407,8 @@ class _BookCard extends StatelessWidget {
                                 ),
                               );
                             } else {
-                              cartProvider.addToCart(book);
+                              cartProvider.addToCart(
+                                  context.read<AppProvider>().userId!, book);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Added to cart'),
@@ -417,6 +440,109 @@ class _BookCard extends StatelessWidget {
             child: const Text('Close'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showSignInDialog(BuildContext context) {
+    bool isGoogleLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Sign In Required'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Please sign in to add items to your cart.',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: isGoogleLoading
+                    ? null
+                    : () async {
+                        setState(() {
+                          isGoogleLoading = true;
+                        });
+
+                        try {
+                          await context.read<AppProvider>().signInWithGoogle();
+                          if (context.mounted) {
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text('Successfully signed in with Google!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Google Sign-In failed: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        } finally {
+                          if (context.mounted) {
+                            setState(() {
+                              isGoogleLoading = false;
+                            });
+                          }
+                        }
+                      },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  side: const BorderSide(color: Colors.grey),
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black87,
+                ),
+                icon: isGoogleLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.grey),
+                        ),
+                      )
+                    : Image.network(
+                        'https://developers.google.com/identity/images/g-logo.png',
+                        height: 20,
+                        width: 20,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.g_mobiledata,
+                            size: 20,
+                            color: Colors.red,
+                          );
+                        },
+                      ),
+                label: Text(
+                  isGoogleLoading ? 'Signing in...' : 'Sign in with Google',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
       ),
     );
   }

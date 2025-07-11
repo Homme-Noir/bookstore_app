@@ -1,398 +1,248 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
-// import 'package:google_sign_in/google_sign_in.dart';
-import 'dart:async';
-// import '../mock_data.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final firestore.FirebaseFirestore _firestore =
-      firestore.FirebaseFirestore.instance;
-  // final GoogleSignIn _googleSignIn = GoogleSignIn();
-  // final UserService _userService = UserService();
-
-  // Mock user data for offline authentication
-  static const List<Map<String, dynamic>> _mockUsers = [
-    {
-      'email': 'user@example.com',
-      'password': 'password123',
-      'uid': 'mock_user_001',
-      'displayName': 'Demo User',
-      'photoURL': null,
-      'isAdmin': false,
-    },
-    {
-      'email': 'admin@example.com',
-      'password': 'admin123',
-      'uid': 'mock_admin_001',
-      'displayName': 'Admin User',
-      'photoURL': null,
-      'isAdmin': true,
-    },
-  ];
-
-  // Stream controller for auth state changes
-  final StreamController<Map<String, dynamic>?> _authStateController =
-      StreamController<Map<String, dynamic>?>.broadcast();
-
-  // Flag to determine if Firebase is available
-  bool _isFirebaseAvailable = false;
-
-  AuthService() {
-    _checkFirebaseAvailability();
-  }
-
-  /// Checks if Firebase is properly configured and available
-  Future<void> _checkFirebaseAvailability() async {
-    try {
-      // Try to access Firebase Auth to see if it's available
-      await _auth.authStateChanges().first;
-      _isFirebaseAvailable = true;
-      debugPrint('Firebase Auth is available');
-
-      // For demo purposes, we'll use mock authentication even when Firebase is available
-      // This allows testing with demo credentials without setting up Firebase users
-      _isFirebaseAvailable = false;
-      debugPrint('Using mock authentication for demo purposes');
-    } catch (e) {
-      _isFirebaseAvailable = false;
-      debugPrint('Firebase Auth not available, using mock authentication: $e');
-    }
-  }
+  final SupabaseClient _supabase = Supabase.instance.client;
 
   /// Returns a stream of authentication state changes.
-  Stream<Map<String, dynamic>?> get onAuthStateChanged {
-    if (_isFirebaseAvailable) {
-      return _auth.authStateChanges().map((user) {
-        if (user != null) {
-          return {
-            'uid': user.uid,
-            'email': user.email,
-            'displayName': user.displayName,
-            'photoURL': user.photoURL,
-          };
-        }
-        return null;
-      });
-    } else {
-      return _authStateController.stream;
-    }
+  Stream<AuthState> get onAuthStateChanged {
+    return _supabase.auth.onAuthStateChange;
   }
 
+  /// Gets the current session
+  Session? get currentSession => _supabase.auth.currentSession;
+
+  /// Gets the current user
+  User? get currentUser => _supabase.auth.currentUser;
+
   /// Signs in a user with email and password.
-  Future<Map<String, dynamic>> signIn(String email, String password) async {
-    if (_isFirebaseAvailable) {
-      try {
-        final userCredential = await _auth.signInWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
+  Future<AuthResponse> signIn(String email, String password) async {
+    try {
+      final response = await _supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
 
-        final user = userCredential.user;
-        if (user != null) {
-          return {
-            'uid': user.uid,
-            'email': user.email,
-            'displayName': user.displayName,
-            'photoURL': user.photoURL,
-          };
-        }
-        throw Exception('Sign in failed');
-      } catch (e) {
-        throw Exception('Sign in failed: $e');
+      if (response.user == null) {
+        throw AuthException('Sign in failed: No user returned');
       }
-    } else {
-      // Mock authentication
-      try {
-        final mockUser = _mockUsers.firstWhere(
-          (user) => user['email'] == email && user['password'] == password,
-          orElse: () => throw Exception('Invalid email or password'),
-        );
 
-        final userData = {
-          'uid': mockUser['uid'],
-          'email': mockUser['email'],
-          'displayName': mockUser['displayName'],
-          'photoURL': mockUser['photoURL'],
-        };
-
-        _authStateController.add(userData);
-        return userData;
-      } catch (e) {
-        throw Exception('Invalid email or password');
-      }
+      return response;
+    } on AuthException catch (e) {
+      throw AuthException('Sign in failed: ${e.message}');
+    } catch (e) {
+      throw AuthException('Sign in failed: ${e.toString()}');
     }
   }
 
   /// Signs up a new user with email and password.
-  Future<Map<String, dynamic>> signUp(String email, String password) async {
-    if (_isFirebaseAvailable) {
-      try {
-        final userCredential = await _auth.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
+  Future<AuthResponse> signUp(String email, String password,
+      {String? fullName}) async {
+    try {
+      final response = await _supabase.auth.signUp(
+        email: email,
+        password: password,
+        data: fullName != null ? {'full_name': fullName} : null,
+      );
 
-        final user = userCredential.user;
-        if (user != null) {
-          // Create user document in Firestore
-          await _firestore.collection('users').doc(user.uid).set({
-            'email': email,
-            'createdAt': firestore.FieldValue.serverTimestamp(),
-            'isAdmin': false,
-          });
-
-          return {
-            'uid': user.uid,
-            'email': user.email,
-            'displayName': user.displayName,
-            'photoURL': user.photoURL,
-          };
-        }
-        throw Exception('Sign up failed');
-      } catch (e) {
-        throw Exception('Sign up failed: $e');
-      }
-    } else {
-      // Mock sign up - check if user already exists
-      if (_mockUsers.any((user) => user['email'] == email)) {
-        throw Exception('User already exists');
+      if (response.user == null) {
+        throw AuthException('Sign up failed: No user returned');
       }
 
-      // Create new mock user
-      final newUser = {
-        'email': email,
-        'password': password,
-        'uid': 'mock_user_${DateTime.now().millisecondsSinceEpoch}',
-        'displayName': email.split('@')[0],
-        'photoURL': null,
-        'isAdmin': false,
-      };
-
-      // In a real implementation, you'd save this to local storage
-      // For now, we'll just add it to the mock users list
-      _mockUsers.add(newUser);
-
-      final userData = {
-        'uid': newUser['uid'],
-        'email': newUser['email'],
-        'displayName': newUser['displayName'],
-        'photoURL': newUser['photoURL'],
-      };
-
-      _authStateController.add(userData);
-      return userData;
+      return response;
+    } on AuthException catch (e) {
+      throw AuthException('Sign up failed: ${e.message}');
+    } catch (e) {
+      throw AuthException('Sign up failed: ${e.toString()}');
     }
   }
 
   /// Signs out the current user.
   Future<void> signOut() async {
-    if (_isFirebaseAvailable) {
-      try {
-        await _auth.signOut();
-      } catch (e) {
-        throw Exception('Sign out failed: $e');
-      }
-    } else {
-      // Mock sign out
-      _authStateController.add(null);
+    try {
+      await _supabase.auth.signOut();
+    } catch (e) {
+      throw AuthException('Sign out failed: ${e.toString()}');
     }
   }
 
   /// Resets the password for a user with the provided email.
   Future<void> resetPassword(String email) async {
-    if (_isFirebaseAvailable) {
-      try {
-        await _auth.sendPasswordResetEmail(email: email);
-      } catch (e) {
-        throw Exception('Password reset failed: $e');
-      }
-    } else {
-      // Mock password reset - just check if user exists
-      if (!_mockUsers.any((user) => user['email'] == email)) {
-        throw Exception('User not found');
-      }
-      // In a real implementation, you'd send an email
-      // For mock purposes, we'll just return success
+    try {
+      await _supabase.auth.resetPasswordForEmail(email);
+    } on AuthException catch (e) {
+      throw AuthException('Password reset failed: ${e.message}');
+    } catch (e) {
+      throw AuthException('Password reset failed: ${e.toString()}');
     }
   }
 
-  /// Gets the current user.
-  Map<String, dynamic>? get currentUser {
-    if (_isFirebaseAvailable) {
-      final user = _auth.currentUser;
-      if (user != null) {
-        return {
-          'uid': user.uid,
-          'email': user.email,
-          'displayName': user.displayName,
-          'photoURL': user.photoURL,
-        };
-      }
-      return null;
-    } else {
-      // For mock auth, we need to track the current user
-      // This is a simplified implementation
-      return null;
-    }
-  }
-
-  /// Checks if the current user is an admin.
+  /// Checks if the current user is an admin by querying the profiles table.
   Future<bool> isAdmin() async {
-    if (_isFirebaseAvailable) {
-      try {
-        final user = _auth.currentUser;
-        if (user == null) return false;
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return false;
 
-        final doc = await _firestore.collection('users').doc(user.uid).get();
-        return doc.exists && (doc.data()?['isAdmin'] ?? false);
-      } catch (e) {
-        return false;
-      }
-    } else {
-      // Mock admin check
-      // This is a simplified implementation - in practice you'd need to track the current user
+      final response = await _supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single();
+
+      return response['is_admin'] ?? false;
+    } catch (e) {
+      debugPrint('Error checking admin status: $e');
       return false;
     }
   }
 
   /// Updates the user's display name.
   Future<void> updateDisplayName(String displayName) async {
-    if (_isFirebaseAvailable) {
-      try {
-        final user = _auth.currentUser;
-        if (user != null) {
-          await user.updateDisplayName(displayName);
-          await _firestore.collection('users').doc(user.uid).update({
-            'displayName': displayName,
-          });
-        }
-      } catch (e) {
-        throw Exception('Failed to update display name: $e');
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) {
+        throw AuthException('No user logged in');
       }
-    } else {
-      // Mock update - would update local storage in real implementation
-      throw Exception('Display name update not implemented in mock mode');
+
+      await _supabase.auth.updateUser(
+        UserAttributes(data: {'full_name': displayName}),
+      );
+    } on AuthException catch (e) {
+      throw AuthException('Failed to update display name: ${e.message}');
+    } catch (e) {
+      throw AuthException('Failed to update display name: ${e.toString()}');
     }
   }
 
   /// Updates the user's photo URL.
   Future<void> updatePhotoURL(String photoURL) async {
-    if (_isFirebaseAvailable) {
-      try {
-        final user = _auth.currentUser;
-        if (user != null) {
-          await user.updatePhotoURL(photoURL);
-          await _firestore.collection('users').doc(user.uid).update({
-            'photoURL': photoURL,
-          });
-        }
-      } catch (e) {
-        throw Exception('Failed to update photo URL: $e');
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) {
+        throw AuthException('No user logged in');
       }
-    } else {
-      // Mock update - would update local storage in real implementation
-      throw Exception('Photo URL update not implemented in mock mode');
+
+      await _supabase.auth.updateUser(
+        UserAttributes(data: {'avatar_url': photoURL}),
+      );
+    } on AuthException catch (e) {
+      throw AuthException('Failed to update photo URL: ${e.message}');
+    } catch (e) {
+      throw AuthException('Failed to update photo URL: ${e.toString()}');
+    }
+  }
+
+  /// Updates the user's password.
+  Future<void> updatePassword(String newPassword) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) {
+        throw AuthException('No user logged in');
+      }
+
+      await _supabase.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+    } on AuthException catch (e) {
+      throw AuthException('Failed to update password: ${e.message}');
+    } catch (e) {
+      throw AuthException('Failed to update password: ${e.toString()}');
+    }
+  }
+
+  /// Creates or updates user profile in the profiles table.
+  Future<void> updateUserProfile({
+    required String userId,
+    String? name,
+    String? email,
+    String? photoUrl,
+    String? address,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      if (name != null) data['full_name'] = name;
+      if (email != null) data['email'] = email;
+      if (photoUrl != null) data['avatar_url'] = photoUrl;
+      if (address != null) data['address'] = address;
+
+      await _supabase.from('profiles').upsert({
+        'id': userId,
+        ...data,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      throw AuthException('Failed to update user profile: ${e.toString()}');
+    }
+  }
+
+  /// Gets user profile from the profiles table.
+  Future<Map<String, dynamic>?> getUserProfile(String userId) async {
+    try {
+      final response =
+          await _supabase.from('profiles').select().eq('id', userId).single();
+
+      return response;
+    } catch (e) {
+      debugPrint('Error fetching user profile: $e');
+      return null;
     }
   }
 
   /// Deletes the current user account.
   Future<void> deleteAccount() async {
-    if (_isFirebaseAvailable) {
-      try {
-        final user = _auth.currentUser;
-        if (user != null) {
-          await _firestore.collection('users').doc(user.uid).delete();
-          await user.delete();
-        }
-      } catch (e) {
-        throw Exception('Failed to delete account: $e');
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) {
+        throw AuthException('No user logged in');
       }
-    } else {
-      // Mock account deletion
-      _authStateController.add(null);
+
+      // First, delete user data from profiles table
+      await _supabase.from('profiles').delete().eq('id', user.id);
+
+      // Then sign out (Supabase handles user deletion on the backend)
+      await _supabase.auth.signOut();
+    } catch (e) {
+      throw AuthException('Failed to delete account: ${e.toString()}');
     }
   }
 
-  /// Disposes the service
-  void dispose() {
-    _authStateController.close();
+  /// Signs in with OAuth provider (Google, GitHub, etc.)
+  Future<void> signInWithOAuth(OAuthProvider provider) async {
+    try {
+      await _supabase.auth.signInWithOAuth(provider);
+    } on AuthException catch (e) {
+      throw AuthException('OAuth sign in failed: ${e.message}');
+    } catch (e) {
+      throw AuthException('OAuth sign in failed: ${e.toString()}');
+    }
   }
 
-  // Sign in with Google
-  /*
-  Future<UserCredential> signInWithGoogle() async {
+  /// Signs in with OTP (One-Time Password)
+  Future<void> signInWithOtp(String email) async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) throw Exception('Google sign in aborted');
+      await _supabase.auth.signInWithOtp(email: email);
+    } on AuthException catch (e) {
+      throw AuthException('OTP sign in failed: ${e.message}');
+    } catch (e) {
+      throw AuthException('OTP sign in failed: ${e.toString()}');
+    }
+  }
 
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+  /// Verifies OTP and signs in the user
+  Future<AuthResponse> verifyOtp(
+      String email, String token, OtpType type) async {
+    try {
+      final response = await _supabase.auth.verifyOTP(
+        email: email,
+        token: token,
+        type: type,
       );
 
-      final userCredential = await _auth.signInWithCredential(credential);
-
-      // Create or update user profile
-      if (userCredential.user != null) {
-        await _userService.updateUserProfile(
-          userId: userCredential.user!.uid,
-          name: userCredential.user!.displayName ?? '',
-          email: userCredential.user!.email!,
-        );
-      }
-
-      return userCredential;
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
+      return response;
+    } on AuthException catch (e) {
+      throw AuthException('OTP verification failed: ${e.message}');
+    } catch (e) {
+      throw AuthException('OTP verification failed: ${e.toString()}');
     }
-  }
-  */
-
-  // Update password
-  Future<void> updatePassword(String newPassword) async {
-    try {
-      final user = _auth.currentUser;
-      if (user != null) {
-        await user.updatePassword(newPassword);
-      }
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
-    }
-  }
-
-  // Handle Firebase Auth exceptions
-  Exception _handleAuthException(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'user-not-found':
-        return Exception('No user found with this email.');
-      case 'wrong-password':
-        return Exception('Wrong password provided.');
-      case 'email-already-in-use':
-        return Exception('Email is already in use.');
-      case 'invalid-email':
-        return Exception('Email address is invalid.');
-      case 'weak-password':
-        return Exception('Password is too weak.');
-      case 'operation-not-allowed':
-        return Exception('Operation not allowed.');
-      case 'user-disabled':
-        return Exception('User has been disabled.');
-      default:
-        return Exception(e.message ?? 'An error occurred.');
-    }
-  }
-
-  Future<void> updateUserProfile(
-      {String? userId,
-      String? name,
-      String? email,
-      String? photoUrl,
-      String? address}) async {
-    // No-op for mock
   }
 }

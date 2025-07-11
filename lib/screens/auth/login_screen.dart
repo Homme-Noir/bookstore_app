@@ -14,6 +14,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   bool _obscurePassword = true;
 
   @override
@@ -48,6 +49,40 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isGoogleLoading = true;
+    });
+
+    try {
+      await context.read<AppProvider>().signInWithGoogle();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Successfully signed in with Google!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Google Sign-In failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
         });
       }
     }
@@ -187,6 +222,50 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
 
+                  // Google Sign-In Button
+                  OutlinedButton.icon(
+                    onPressed: _isGoogleLoading ? null : _signInWithGoogle,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: Colors.grey),
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black87,
+                    ),
+                    icon: _isGoogleLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.grey,
+                              ),
+                            ),
+                          )
+                        : Image.network(
+                            'https://developers.google.com/identity/images/g-logo.png',
+                            height: 20,
+                            width: 20,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(
+                                Icons.g_mobiledata,
+                                size: 20,
+                                color: Colors.red,
+                              );
+                            },
+                          ),
+                    label: Text(
+                      _isGoogleLoading
+                          ? 'Signing in...'
+                          : 'Sign in with Google',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
                   // Mock Credentials Info
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -214,7 +293,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'User: user@example.com / password123\nAdmin: admin@example.com / admin123',
+                          'User: user@example.com / password123\nAdmin: admin@bookstore.com / admin123',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.blue.shade700,

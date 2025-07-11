@@ -1,0 +1,4 @@
+- Use graphs for analytics
+- Find out what admiral2login is
+- Find a free replacement for firebase
+- Add google account login demo

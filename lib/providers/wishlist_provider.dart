@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import '../models/book.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class WishlistProvider with ChangeNotifier {
   List<Book> _wishlist = [];
@@ -13,14 +12,37 @@ class WishlistProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Load wishlist
+  // Load wishlist from Supabase
   Future<void> loadWishlist(String userId) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      await _loadWishlistFromStorage(userId);
+      final data = await Supabase.instance.client
+          .from('wishlist')
+          .select('book_id')
+          .eq('user_id', userId);
+      final bookIds =
+          (data as List).map((e) => e['book_id'] as String).toList();
+      _wishlist = bookIds
+          .map((id) => Book(
+              id: id,
+              title: '',
+              author: '',
+              description: '',
+              coverImage: '',
+              price: 0.0,
+              genres: [],
+              stock: 0,
+              rating: 0.0,
+              reviewCount: 0,
+              releaseDate: DateTime.now(),
+              isBestseller: false,
+              isNewArrival: false,
+              isbn: '',
+              pageCount: 0))
+          .toList();
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -29,7 +51,7 @@ class WishlistProvider with ChangeNotifier {
     }
   }
 
-  // Add to wishlist
+  // Add to wishlist in Supabase
   Future<void> addToWishlist(String userId, Book book) async {
     try {
       _isLoading = true;
@@ -37,8 +59,10 @@ class WishlistProvider with ChangeNotifier {
       notifyListeners();
 
       if (!_wishlist.any((b) => b.id == book.id)) {
+        await Supabase.instance.client
+            .from('wishlist')
+            .insert({'user_id': userId, 'book_id': book.id});
         _wishlist.add(book);
-        await _saveWishlistToStorage(userId);
       }
     } catch (e) {
       _error = e.toString();
@@ -48,15 +72,19 @@ class WishlistProvider with ChangeNotifier {
     }
   }
 
-  // Remove from wishlist
+  // Remove from wishlist in Supabase
   Future<void> removeFromWishlist(String userId, String bookId) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
+      await Supabase.instance.client
+          .from('wishlist')
+          .delete()
+          .eq('user_id', userId)
+          .eq('book_id', bookId);
       _wishlist.removeWhere((book) => book.id == bookId);
-      await _saveWishlistToStorage(userId);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -74,70 +102,5 @@ class WishlistProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
-  }
-
-  // Save wishlist to local storage
-  Future<void> _saveWishlistToStorage(String userId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final wishlistJson = _wishlist
-          .map((book) => {
-                'id': book.id,
-                'title': book.title,
-                'author': book.author,
-                'description': book.description,
-                'coverImage': book.coverImage,
-                'price': book.price,
-                'genres': book.genres,
-                'stock': book.stock,
-                'rating': book.rating,
-                'reviewCount': book.reviewCount,
-                'releaseDate': book.releaseDate.toIso8601String(),
-                'isBestseller': book.isBestseller,
-                'isNewArrival': book.isNewArrival,
-                'isbn': book.isbn,
-                'pageCount': book.pageCount,
-                'status': book.status,
-              })
-          .toList();
-      await prefs.setString('wishlist_$userId', jsonEncode(wishlistJson));
-    } catch (e) {
-      debugPrint('Error saving wishlist: $e');
-    }
-  }
-
-  // Load wishlist from local storage
-  Future<void> _loadWishlistFromStorage(String userId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final wishlistString = prefs.getString('wishlist_$userId');
-
-      if (wishlistString != null) {
-        final wishlistJson = jsonDecode(wishlistString) as List;
-        _wishlist = wishlistJson
-            .map((bookJson) => Book(
-                  id: bookJson['id'],
-                  title: bookJson['title'],
-                  author: bookJson['author'],
-                  description: bookJson['description'],
-                  coverImage: bookJson['coverImage'],
-                  price: bookJson['price'].toDouble(),
-                  genres: List<String>.from(bookJson['genres']),
-                  stock: bookJson['stock'],
-                  rating: bookJson['rating'].toDouble(),
-                  reviewCount: bookJson['reviewCount'],
-                  releaseDate: DateTime.parse(bookJson['releaseDate']),
-                  isBestseller: bookJson['isBestseller'],
-                  isNewArrival: bookJson['isNewArrival'],
-                  isbn: bookJson['isbn'],
-                  pageCount: bookJson['pageCount'],
-                  status: bookJson['status'],
-                ))
-            .toList();
-      }
-    } catch (e) {
-      debugPrint('Error loading wishlist: $e');
-      _wishlist = [];
-    }
   }
 }
