@@ -1,6 +1,6 @@
 {
-    "name": "bookstore_app",
-    "short_name": "bookstore_app",
+    "name": "Personal Library",
+    "short_name": "Personal Library",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

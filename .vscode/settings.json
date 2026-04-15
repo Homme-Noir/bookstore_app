@@ -1,4 +1,6 @@
 {
     "cmake.ignoreCMakeListsMissing": true,
-    "java.configuration.updateBuildConfiguration": "automatic"
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "snyk.advanced.organization": "0324e219-3ffa-439b-9892-f4354ef4498a",
+    "snyk.advanced.autoSelectOrganization": true
 }

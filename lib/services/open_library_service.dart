@@ -7,8 +7,13 @@ class OpenLibraryService {
 
   /// Gets a default list of popular books from Open Library API.
   Future<List<Book>> getDefaultBooks() async {
+    final raw = await defaultOpenLibraryRaw();
+    return raw.map(convertToBook).toList();
+  }
+
+  /// Raw Open Library search hits (includes Internet Archive ids when present).
+  Future<List<OpenLibraryBook>> defaultOpenLibraryRaw() async {
     try {
-      // Search for popular books using a more reliable query
       final response = await http.get(
         Uri.parse('$_baseUrl/search.json?q=fiction&limit=20'),
       );
@@ -19,7 +24,7 @@ class OpenLibraryService {
 
         return docs
             .map((doc) => OpenLibraryBook.fromSearchResult(doc))
-            .map((olBook) => convertToBook(olBook))
+            .cast<OpenLibraryBook>()
             .toList();
       } else {
         throw Exception('Failed to get default books: ${response.statusCode}');
@@ -58,36 +63,95 @@ class OpenLibraryService {
   Future<List<Book>> getBooksForCategory(String category) async {
     try {
       String query;
+      String? fallbackQuery;
       switch (category.toLowerCase()) {
         case 'action':
           query = 'action adventure thriller';
+          fallbackQuery = 'action';
           break;
         case 'romance':
           query = 'romance love story';
+          fallbackQuery = 'romance';
           break;
         case 'mystery':
           query = 'mystery detective crime';
+          fallbackQuery = 'mystery';
           break;
         case 'science fiction':
           query = 'science fiction sci-fi';
+          fallbackQuery = 'science fiction';
           break;
         case 'fantasy':
           query = 'fantasy magic adventure';
+          fallbackQuery = 'fantasy';
           break;
         case 'biography':
           query = 'biography memoir autobiography';
+          fallbackQuery = 'biography';
           break;
         case 'history':
           query = 'history historical';
+          fallbackQuery = 'history';
           break;
         case 'self-help':
           query = 'self-help personal development';
+          fallbackQuery = 'self-help';
           break;
         case 'business':
           query = 'business economics management';
+          fallbackQuery = 'business';
           break;
         case 'cooking':
           query = 'cooking food recipes';
+          fallbackQuery = 'cooking';
+          break;
+        case 'horror':
+          query = 'horror scary thriller';
+          fallbackQuery = 'horror';
+          break;
+        case 'children':
+          query = 'children kids juvenile';
+          fallbackQuery = 'children';
+          break;
+        case 'comics':
+          query = 'comics graphic novels manga';
+          fallbackQuery = 'comics';
+          break;
+        case 'poetry':
+          query = 'poetry poems verse';
+          fallbackQuery = 'poetry';
+          break;
+        case 'classics':
+          query = 'classics literature';
+          fallbackQuery = 'classics';
+          break;
+        case 'health':
+          query = 'health wellness fitness';
+          fallbackQuery = 'health';
+          break;
+        case 'travel':
+          query = 'travel adventure';
+          fallbackQuery = 'travel';
+          break;
+        case 'religion':
+          query = 'religion spirituality faith';
+          fallbackQuery = 'religion';
+          break;
+        case 'art':
+          query = 'art design painting';
+          fallbackQuery = 'art';
+          break;
+        case 'science':
+          query = 'science nature';
+          fallbackQuery = 'science';
+          break;
+        case 'technology':
+          query = 'technology computers';
+          fallbackQuery = 'technology';
+          break;
+        case 'sports':
+          query = 'sports games athletics';
+          fallbackQuery = 'sports';
           break;
         case 'technology':
           query = 'technology computer science programming';
@@ -143,18 +207,33 @@ class OpenLibraryService {
             '$_baseUrl/search.json?q=${Uri.encodeComponent(query)}&limit=15'),
       );
 
+      List<Book> books = [];
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final docs = data['docs'] as List;
-
-        return docs
+        books = docs
             .map((doc) => OpenLibraryBook.fromSearchResult(doc))
             .map((olBook) => convertToBook(olBook))
             .toList();
-      } else {
-        throw Exception(
-            'Failed to get books for category: ${response.statusCode}');
       }
+
+      // If no books found and fallbackQuery is set, try fallback
+      if (books.isEmpty && fallbackQuery != null) {
+        final fallbackResponse = await http.get(
+          Uri.parse(
+              '$_baseUrl/search.json?q=${Uri.encodeComponent(fallbackQuery)}&limit=15'),
+        );
+        if (fallbackResponse.statusCode == 200) {
+          final data = json.decode(fallbackResponse.body);
+          final docs = data['docs'] as List;
+          books = docs
+              .map((doc) => OpenLibraryBook.fromSearchResult(doc))
+              .map((olBook) => convertToBook(olBook))
+              .toList();
+        }
+      }
+
+      return books;
     } catch (e) {
       throw Exception('Error getting books for category: $e');
     }
@@ -162,6 +241,12 @@ class OpenLibraryService {
 
   /// Searches for books by title, author, or general query using Open Library API.
   Future<List<Book>> searchBooks(String query) async {
+    final raw = await searchOpenLibraryRaw(query);
+    return raw.map(convertToBook).toList();
+  }
+
+  /// Raw Open Library search hits (includes Internet Archive ids when present).
+  Future<List<OpenLibraryBook>> searchOpenLibraryRaw(String query) async {
     try {
       final response = await http.get(
         Uri.parse(
@@ -174,7 +259,7 @@ class OpenLibraryService {
 
         return docs
             .map((doc) => OpenLibraryBook.fromSearchResult(doc))
-            .map((olBook) => convertToBook(olBook))
+            .cast<OpenLibraryBook>()
             .toList();
       } else {
         throw Exception('Failed to search books: ${response.statusCode}');
@@ -261,6 +346,8 @@ class OpenLibraryBook {
   final List<String> subjects;
   final String? publisher;
   final String? openLibraryId;
+  /// Internet Archive item ids (when Open Library links a scan / OA file).
+  final List<String> internetArchiveIds;
 
   OpenLibraryBook({
     required this.title,
@@ -273,6 +360,7 @@ class OpenLibraryBook {
     required this.subjects,
     this.publisher,
     this.openLibraryId,
+    this.internetArchiveIds = const [],
   });
 
   factory OpenLibraryBook.fromSearchResult(Map<String, dynamic> data) {
@@ -287,6 +375,7 @@ class OpenLibraryBook {
       subjects: OpenLibraryBook.extractSubjects(data['subject']),
       publisher: data['publisher']?.first,
       openLibraryId: data['key'],
+      internetArchiveIds: _extractInternetArchiveIds(data['ia']),
     );
   }
 
@@ -303,6 +392,7 @@ class OpenLibraryBook {
       subjects: _extractSubjectsFromIsbn(data['subjects']),
       publisher: data['publishers']?.first?['name'],
       openLibraryId: data['key'],
+      internetArchiveIds: const [],
     );
   }
 
@@ -318,7 +408,17 @@ class OpenLibraryBook {
       subjects: OpenLibraryBook.extractSubjects(data['subjects']),
       publisher: null,
       openLibraryId: data['key'],
+      internetArchiveIds: const [],
     );
+  }
+
+  static List<String> _extractInternetArchiveIds(dynamic ia) {
+    if (ia is! List) return const [];
+    return ia
+        .map((e) => e.toString())
+        .where((s) => s.trim().isNotEmpty)
+        .take(8)
+        .toList();
   }
 
   static String? _getCoverImage(dynamic coverId) {

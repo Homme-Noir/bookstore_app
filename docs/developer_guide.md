@@ -1,104 +1,69 @@
-# Book Store App - Developer Guide
+# Developer Guide
 
-## Project Overview
-A Flutter app for browsing, purchasing, and managing books, with a simulated payment and admin dashboard.  
-All data is local (Provider + SharedPreferences).  
-Open Library is used for book data.
+## Overview
 
----
+This repository is a **personal library** Flutter application: offline-first local storage (Drift/SQLite), optional **Supabase** sync, book **discovery** via a small FastAPI service or direct Open Library, and an **EPUB/PDF** reader with progress and annotations.
 
-## Tech Stack
-- **Flutter** (Dart)
-- **Provider** (state management)
-- **SharedPreferences** (local storage)
-- **Open Library API** (book data)
-- **Material Design**
+The Dart package name is **`personal_library`** (`pubspec.yaml`); the product is branded **Personal Library** in the UI.
 
----
+## Tech stack
 
-## Directory Structure
+- **Flutter / Dart** (see `pubspec.yaml` for SDK bounds)
+- **Provider** for app-wide state
+- **Drift** + **sqlite3** for local catalog, reading state, annotations, and retry jobs
+- **flutter_secure_storage** for sync checkpoints and other sensitive key-value data
+- **supabase_flutter** when `SUPABASE_URL` and `SUPABASE_ANON_KEY` are supplied at build/run time
+- **FastAPI** discovery microservice under `backend/discovery-service/` (optional; can use bundled adapters instead)
+
+## Repository layout
+
 ```
 lib/
-├── models/           # Data models (Book, Order, etc.)
-├── providers/        # State management (AppProvider, CartProvider, ProfileProvider)
-├── screens/          # UI screens (home, store, cart, profile, admin_dashboard)
-├── services/         # Business logic (auth_service, open_library_service)
-├── theme/            # App theming
-├── widgets/          # Reusable UI components
+  core/                 # Cross-cutting: DB, secure storage, telemetry
+  features/
+    discovery/          # Search adapters, ingest, UI
+    library/            # Local catalog
+    reader/             # Progress + annotations
+    sync/               # Supabase sync orchestration, retry queue, conflicts
+  providers/            # AppProvider, ProfileProvider (shell state)
+  screens/              # Navigation shell, auth, onboarding, profile
+  services/             # Auth, Open Library, Supabase sync, sync state
+  theme/
+backend/
+  discovery-service/    # FastAPI search + download preflight
+  supabase/             # schema.sql, rls.sql, indexes.sql
+docs/                   # Architecture, ops, this guide
+scripts/                # Supabase JS helpers, release helpers
 ```
 
----
+Platform folders (`android/`, `ios/`, `linux/`, …) follow standard Flutter layout.
 
-## Key Components
-- **AppProvider:**  
-  - Manages books, user library, wishlist, favorites, and authentication state.
-- **CartProvider:**  
-  - Manages cart items and checkout.
-- **ProfileProvider:**  
-  - Manages user profile and order history.
-- **AdminDashboardScreen:**  
-  - Analytics and user overview for admin.
+## Configuration
 
----
+1. Copy `.env.dev.template` to **`.env.local`** (gitignored) and set secrets such as `SUPABASE_ANON_KEY`.
+2. Run with `--dart-define-from-file=.env.local` as described in the root `README.md`.
+3. For the discovery API on a physical device, use a **public** base URL (for example Fly.io), not `localhost`.
 
-## State Management
-- Uses **Provider** for all app state.
-- All user data (library, wishlist, favorites, orders) is stored in SharedPreferences.
+If Supabase variables are omitted, the app uses **mock authentication** and local-only features; see `AuthService`.
 
----
+## Adding a feature
 
-## Setup & Running
-1. **Install Flutter SDK** (3.2+ recommended)
-2. **Clone the repo**
-   ```bash
-   git clone <repo-url>
-   cd bookstore_app
-   ```
-3. **Install dependencies**
-   ```bash
-   flutter pub get
-   ```
-4. **Run the app**
-   ```bash
-   flutter run
-   ```
+- **New screen:** add under `lib/screens/` or under the relevant `features/*/presentation/screens/` folder, register a route in `lib/main.dart` if needed.
+- **New provider:** create a `ChangeNotifier` (or existing pattern), register it in `MyApp`’s `MultiProvider` in `lib/main.dart`.
+- **New persistence:** extend `LocalDatabase` and repositories under `features/*/data/`; mirror server shape in `backend/supabase/` when syncing.
 
----
+## Testing and analysis
 
-## Adding Features
-- **To add a new screen:**  
-  - Create a new file in `lib/screens/`
-  - Add a route in `main.dart`
-- **To add a new provider:**  
-  - Create in `lib/providers/`
-  - Register in `main.dart` with `MultiProvider`
+```bash
+flutter pub get
+flutter analyze
+flutter test
+```
 
----
+The GitHub Actions workflow in `.github/workflows/ci.yml` runs analyze, tests, and discovery-service checks.
 
-## Testing
-- Use `flutter test` for unit tests (add tests in `test/` directory).
-- UI can be tested with `flutter run` and hot reload.
+## Related reading
 
----
-
-## Admin Features
-- Log in as `admin@bookstore.com` to access the admin dashboard.
-- Analytics and user overview are based on local order history.
-
----
-
-## Troubleshooting
-- **Data not saving:**  
-  - Ensure SharedPreferences is working and not cleared.
-- **Admin dashboard not visible:**  
-  - Make sure you are logged in as `admin@bookstore.com` and have set your profile email accordingly.
-
----
-
-## Notes
-- No real backend, payment, or user management is implemented.
-- All data is local and for demo/development only.
-
----
-
-_Last updated: June 2025_
+- [architecture.md](architecture.md) — data flow and conflict handling
+- [api_documentation.md](api_documentation.md) — Supabase and HTTP APIs
+- [production_checklist.md](production_checklist.md) — shipping builds

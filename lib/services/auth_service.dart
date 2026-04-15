@@ -1,248 +1,322 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../core/config/resolved_runtime_config.dart';
+import '../core/security/secure_kv_store.dart';
 
+/// Authentication: Supabase Auth when configured, otherwise in-memory mock users.
+///
+/// Listens to Supabase session changes when initialized; mock mode is intended
+/// for local development without backend credentials.
 class AuthService {
-  final SupabaseClient _supabase = Supabase.instance.client;
+  static final List<Map<String, dynamic>> _mockUsers = [
+    {
+      'email': 'user@example.com',
+      'password': 'password123',
+      'uid': 'mock_user_001',
+      'displayName': 'Demo User',
+      'photoURL': null,
+      'isAdmin': false,
+    },
+    {
+      'email': 'admin@example.com',
+      'password': 'admin123',
+      'uid': 'mock_admin_001',
+      'displayName': 'Admin User',
+      'photoURL': null,
+      'isAdmin': true,
+    },
+  ];
 
-  /// Returns a stream of authentication state changes.
-  Stream<AuthState> get onAuthStateChanged {
-    return _supabase.auth.onAuthStateChange;
+  final StreamController<Map<String, dynamic>?> _authStateController =
+      StreamController<Map<String, dynamic>?>.broadcast();
+
+  bool _isSupabaseConfigured = false;
+  StreamSubscription<AuthState>? _authSubscription;
+  Map<String, dynamic>? _mockCurrentUser;
+  final SecureKvStore _secureStore;
+
+  AuthService({SecureKvStore? secureStore})
+      : _secureStore = secureStore ?? const SecureKvStore() {
+    _initializeSupabase();
   }
 
-  /// Gets the current session
-  Session? get currentSession => _supabase.auth.currentSession;
-
-  /// Gets the current user
-  User? get currentUser => _supabase.auth.currentUser;
-
-  /// Signs in a user with email and password.
-  Future<AuthResponse> signIn(String email, String password) async {
-    try {
-      final response = await _supabase.auth.signInWithPassword(
-        email: email,
-        password: password,
+  Future<void> _initializeSupabase() async {
+    final cfg = ResolvedRuntimeConfig.instance;
+    if (!cfg.isSupabaseConfigured) {
+      _isSupabaseConfigured = false;
+      debugPrint(
+        'Supabase env missing; using mock authentication. '
+        'Set SUPABASE_URL and SUPABASE_ANON_KEY in .env.local, or use '
+        '--dart-define / --dart-define-from-file.',
       );
-
-      if (response.user == null) {
-        throw AuthException('Sign in failed: No user returned');
-      }
-
-      return response;
-    } on AuthException catch (e) {
-      throw AuthException('Sign in failed: ${e.message}');
-    } catch (e) {
-      throw AuthException('Sign in failed: ${e.toString()}');
+      return;
     }
-  }
 
-  /// Signs up a new user with email and password.
-  Future<AuthResponse> signUp(String email, String password,
-      {String? fullName}) async {
     try {
-      final response = await _supabase.auth.signUp(
-        email: email,
-        password: password,
-        data: fullName != null ? {'full_name': fullName} : null,
-      );
+      final client = Supabase.instance.client;
+      _isSupabaseConfigured = true;
 
-      if (response.user == null) {
-        throw AuthException('Sign up failed: No user returned');
-      }
-
-      return response;
-    } on AuthException catch (e) {
-      throw AuthException('Sign up failed: ${e.message}');
-    } catch (e) {
-      throw AuthException('Sign up failed: ${e.toString()}');
-    }
-  }
-
-  /// Signs out the current user.
-  Future<void> signOut() async {
-    try {
-      await _supabase.auth.signOut();
-    } catch (e) {
-      throw AuthException('Sign out failed: ${e.toString()}');
-    }
-  }
-
-  /// Resets the password for a user with the provided email.
-  Future<void> resetPassword(String email) async {
-    try {
-      await _supabase.auth.resetPasswordForEmail(email);
-    } on AuthException catch (e) {
-      throw AuthException('Password reset failed: ${e.message}');
-    } catch (e) {
-      throw AuthException('Password reset failed: ${e.toString()}');
-    }
-  }
-
-  /// Checks if the current user is an admin by querying the profiles table.
-  Future<bool> isAdmin() async {
-    try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) return false;
-
-      final response = await _supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', user.id)
-          .single();
-
-      return response['is_admin'] ?? false;
-    } catch (e) {
-      debugPrint('Error checking admin status: $e');
-      return false;
-    }
-  }
-
-  /// Updates the user's display name.
-  Future<void> updateDisplayName(String displayName) async {
-    try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) {
-        throw AuthException('No user logged in');
-      }
-
-      await _supabase.auth.updateUser(
-        UserAttributes(data: {'full_name': displayName}),
-      );
-    } on AuthException catch (e) {
-      throw AuthException('Failed to update display name: ${e.message}');
-    } catch (e) {
-      throw AuthException('Failed to update display name: ${e.toString()}');
-    }
-  }
-
-  /// Updates the user's photo URL.
-  Future<void> updatePhotoURL(String photoURL) async {
-    try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) {
-        throw AuthException('No user logged in');
-      }
-
-      await _supabase.auth.updateUser(
-        UserAttributes(data: {'avatar_url': photoURL}),
-      );
-    } on AuthException catch (e) {
-      throw AuthException('Failed to update photo URL: ${e.message}');
-    } catch (e) {
-      throw AuthException('Failed to update photo URL: ${e.toString()}');
-    }
-  }
-
-  /// Updates the user's password.
-  Future<void> updatePassword(String newPassword) async {
-    try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) {
-        throw AuthException('No user logged in');
-      }
-
-      await _supabase.auth.updateUser(
-        UserAttributes(password: newPassword),
-      );
-    } on AuthException catch (e) {
-      throw AuthException('Failed to update password: ${e.message}');
-    } catch (e) {
-      throw AuthException('Failed to update password: ${e.toString()}');
-    }
-  }
-
-  /// Creates or updates user profile in the profiles table.
-  Future<void> updateUserProfile({
-    required String userId,
-    String? name,
-    String? email,
-    String? photoUrl,
-    String? address,
-  }) async {
-    try {
-      final data = <String, dynamic>{};
-      if (name != null) data['full_name'] = name;
-      if (email != null) data['email'] = email;
-      if (photoUrl != null) data['avatar_url'] = photoUrl;
-      if (address != null) data['address'] = address;
-
-      await _supabase.from('profiles').upsert({
-        'id': userId,
-        ...data,
-        'updated_at': DateTime.now().toIso8601String(),
+      _authSubscription = client.auth.onAuthStateChange.listen((event) {
+        final user = event.session?.user;
+        final mapped = user == null ? null : _mapSupabaseUser(user);
+        if (mapped == null) {
+          _clearAuthMeta();
+        } else {
+          _persistAuthMeta(mapped);
+        }
+        _authStateController.add(mapped);
       });
+
+      final current = client.auth.currentUser;
+      if (current != null) {
+        _authStateController.add(_mapSupabaseUser(current));
+      }
     } catch (e) {
-      throw AuthException('Failed to update user profile: ${e.toString()}');
+      _isSupabaseConfigured = false;
+      debugPrint('Supabase unavailable; using mock authentication: $e');
     }
   }
 
-  /// Gets user profile from the profiles table.
-  Future<Map<String, dynamic>?> getUserProfile(String userId) async {
-    try {
-      final response =
-          await _supabase.from('profiles').select().eq('id', userId).single();
+  Stream<Map<String, dynamic>?> get onAuthStateChanged {
+    return _authStateController.stream;
+  }
 
-      return response;
-    } catch (e) {
-      debugPrint('Error fetching user profile: $e');
+  Future<Map<String, dynamic>> signIn(String email, String password) async {
+    if (_isSupabaseConfigured) {
+      try {
+        final result = await Supabase.instance.client.auth.signInWithPassword(
+          email: email,
+          password: password,
+        );
+        final user = result.user;
+        if (user == null) {
+          throw Exception('No user in session');
+        }
+        final userData = _mapSupabaseUser(user);
+        await _persistAuthMeta(userData);
+        _authStateController.add(userData);
+        return userData;
+      } on AuthException catch (e) {
+        debugPrint(
+          'Supabase signInWithPassword: ${e.message} code=${e.code}',
+        );
+        throw Exception(_signInErrorMessage(e));
+      } catch (e, st) {
+        debugPrint('signIn unexpected: $e\n$st');
+        throw Exception('Sign in failed: $e');
+      }
+    }
+
+    final mockUser = _mockUsers.firstWhere(
+      (user) => user['email'] == email && user['password'] == password,
+      orElse: () => throw Exception('Invalid email or password'),
+    );
+
+    final userData = {
+      'uid': mockUser['uid'],
+      'email': mockUser['email'],
+      'displayName': mockUser['displayName'],
+      'photoURL': mockUser['photoURL'],
+    };
+    _mockCurrentUser = userData;
+    await _persistAuthMeta(userData);
+    _authStateController.add(userData);
+    return userData;
+  }
+
+  Future<Map<String, dynamic>> signUp(String email, String password) async {
+    if (_isSupabaseConfigured) {
+      try {
+        final result = await Supabase.instance.client.auth.signUp(
+          email: email,
+          password: password,
+        );
+        final user = result.user;
+        if (user != null) {
+          final userData = _mapSupabaseUser(user);
+          await _persistAuthMeta(userData);
+          _authStateController.add(userData);
+          return userData;
+        }
+        return signIn(email, password);
+      } on AuthException catch (e) {
+        debugPrint('Supabase signUp: ${e.message} code=${e.code}');
+        throw Exception(_signInErrorMessage(e));
+      } catch (e, st) {
+        debugPrint('signUp unexpected: $e\n$st');
+        throw Exception('Sign up failed: $e');
+      }
+    }
+
+    if (_mockUsers.any((user) => user['email'] == email)) {
+      throw Exception('User already exists');
+    }
+
+    final newUser = {
+      'email': email,
+      'password': password,
+      'uid': 'mock_user_${DateTime.now().millisecondsSinceEpoch}',
+      'displayName': email.split('@')[0],
+      'photoURL': null,
+      'isAdmin': false,
+    };
+    _mockUsers.add(newUser);
+
+    final userData = {
+      'uid': newUser['uid'],
+      'email': newUser['email'],
+      'displayName': newUser['displayName'],
+      'photoURL': newUser['photoURL'],
+    };
+    _mockCurrentUser = userData;
+    await _persistAuthMeta(userData);
+    _authStateController.add(userData);
+    return userData;
+  }
+
+  Future<void> signOut() async {
+    if (_isSupabaseConfigured) {
+      try {
+        await Supabase.instance.client.auth.signOut();
+      } catch (_) {
+        throw Exception('Sign out failed');
+      }
+    }
+    _mockCurrentUser = null;
+    await _clearAuthMeta();
+    _authStateController.add(null);
+  }
+
+  Future<void> resetPassword(String email) async {
+    if (_isSupabaseConfigured) {
+      await Supabase.instance.client.auth.resetPasswordForEmail(email);
+      return;
+    }
+    if (!_mockUsers.any((user) => user['email'] == email)) {
+      throw Exception('User not found');
+    }
+  }
+
+  Map<String, dynamic>? get currentUser {
+    if (!_isSupabaseConfigured) {
+      return _mockCurrentUser;
+    }
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
       return null;
     }
+    return _mapSupabaseUser(user);
   }
 
-  /// Deletes the current user account.
-  Future<void> deleteAccount() async {
-    try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) {
-        throw AuthException('No user logged in');
+  Future<bool> isAdmin() async {
+    final email = currentUser?['email']?.toString().toLowerCase();
+    return email == 'admin@example.com';
+  }
+
+  Future<void> updateDisplayName(String displayName) async {
+    if (_isSupabaseConfigured) {
+      try {
+        await Supabase.instance.client.auth.updateUser(
+          UserAttributes(data: {'display_name': displayName}),
+        );
+      } catch (_) {
+        throw Exception('Failed to update display name');
       }
-
-      // First, delete user data from profiles table
-      await _supabase.from('profiles').delete().eq('id', user.id);
-
-      // Then sign out (Supabase handles user deletion on the backend)
-      await _supabase.auth.signOut();
-    } catch (e) {
-      throw AuthException('Failed to delete account: ${e.toString()}');
+      return;
     }
+    _mockCurrentUser = {
+      ...?_mockCurrentUser,
+      'displayName': displayName,
+    };
+    _authStateController.add(_mockCurrentUser);
   }
 
-  /// Signs in with OAuth provider (Google, GitHub, etc.)
-  Future<void> signInWithOAuth(OAuthProvider provider) async {
-    try {
-      await _supabase.auth.signInWithOAuth(provider);
-    } on AuthException catch (e) {
-      throw AuthException('OAuth sign in failed: ${e.message}');
-    } catch (e) {
-      throw AuthException('OAuth sign in failed: ${e.toString()}');
-    }
+  Future<void> updatePhotoURL(String photoURL) async {
+    _mockCurrentUser = {
+      ...?_mockCurrentUser,
+      'photoURL': photoURL,
+    };
+    _authStateController.add(_mockCurrentUser);
   }
 
-  /// Signs in with OTP (One-Time Password)
-  Future<void> signInWithOtp(String email) async {
-    try {
-      await _supabase.auth.signInWithOtp(email: email);
-    } on AuthException catch (e) {
-      throw AuthException('OTP sign in failed: ${e.message}');
-    } catch (e) {
-      throw AuthException('OTP sign in failed: ${e.toString()}');
-    }
-  }
-
-  /// Verifies OTP and signs in the user
-  Future<AuthResponse> verifyOtp(
-      String email, String token, OtpType type) async {
-    try {
-      final response = await _supabase.auth.verifyOTP(
-        email: email,
-        token: token,
-        type: type,
+  Future<void> deleteAccount() async {
+    if (_isSupabaseConfigured) {
+      throw Exception(
+        'Account deletion should be handled by a secured Supabase function.',
       );
-
-      return response;
-    } on AuthException catch (e) {
-      throw AuthException('OTP verification failed: ${e.message}');
-    } catch (e) {
-      throw AuthException('OTP verification failed: ${e.toString()}');
     }
+    _mockCurrentUser = null;
+    _authStateController.add(null);
+  }
+
+  void dispose() {
+    _authSubscription?.cancel();
+    _authStateController.close();
+  }
+
+  Future<void> updatePassword(String newPassword) async {
+    if (_isSupabaseConfigured) {
+      try {
+        await Supabase.instance.client.auth.updateUser(
+          UserAttributes(password: newPassword),
+        );
+      } catch (_) {
+        throw Exception('Failed to update password');
+      }
+      return;
+    }
+    throw Exception('Password update not implemented in mock mode');
+  }
+
+  /// Maps GoTrue / Supabase Auth errors to short UI copy. Table data alone does
+  /// not create an [auth.users] row — users must exist under Authentication.
+  static String _signInErrorMessage(AuthException e) {
+    final code = e.code?.toLowerCase();
+    final msg = e.message;
+    if (code == 'email_not_confirmed' ||
+        msg.toLowerCase().contains('email not confirmed')) {
+      return 'Confirm your email: open the link Supabase sent, or disable '
+          '“Confirm email” in Dashboard → Authentication → Providers → Email '
+          '(dev only).';
+    }
+    if (code == 'invalid_credentials' ||
+        msg.toLowerCase().contains('invalid login')) {
+      return 'Invalid email or password. If you only added data in the Table '
+          'Editor, create a user under Authentication → Users (or sign up in the app).';
+    }
+    if (msg.isNotEmpty) return msg;
+    return 'Sign in failed';
+  }
+
+  Map<String, dynamic> _mapSupabaseUser(User user) {
+    return {
+      'uid': user.id,
+      'email': user.email,
+      'displayName': user.userMetadata?['display_name'] ?? user.email,
+      'photoURL': null,
+    };
+  }
+
+  Future<void> updateUserProfile(
+      {String? userId,
+      String? name,
+      String? email,
+      String? photoUrl,
+      String? address}) async {
+    // No-op for mock
+  }
+
+  Future<void> _persistAuthMeta(Map<String, dynamic> user) async {
+    await _secureStore.write('session_user_id', user['uid']?.toString() ?? '');
+    await _secureStore.write(
+      'session_user_email',
+      user['email']?.toString() ?? '',
+    );
+  }
+
+  Future<void> _clearAuthMeta() async {
+    await _secureStore.delete('session_user_id');
+    await _secureStore.delete('session_user_email');
   }
 }

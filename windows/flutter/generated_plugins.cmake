@@ -5,6 +5,11 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   file_selector_windows
+  flutter_secure_storage_windows
+  flutter_tts
+  pdfx
+  share_plus
+  sqlite3_flutter_libs
   url_launcher_windows
 )
 

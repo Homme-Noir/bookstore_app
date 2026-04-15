@@ -1,3 +1,17 @@
+# Local secrets (never commit)
+.env
+.env.local
+.env.*.local
+dev.env
+flutter_run.env
+
+# Node (Supabase JS tooling)
+node_modules/
+
+# Editor / local agent metadata (keep machine-specific)
+.cursor/
+.qwen/
+
 # Miscellaneous
 *.class
 *.log
@@ -43,3 +57,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Release signing (never commit)
+android/key.properties
+*.jks

@@ -1,69 +1,57 @@
-# API Documentation
+# API and integration surface
 
-## Overview
-All data operations are handled **locally in Dart** using Provider and SharedPreferences.  
-There are **no real network or backend API calls**.  
-All data is lost if the app is uninstalled or local storage is cleared.
+This app talks to two kinds of backends: **Supabase** (Postgres, Auth, optional Storage) and the optional **discovery** HTTP service. Everything else runs locally in Dart.
 
----
+## Supabase (when configured)
 
-## Authentication
-- **Login:**  
-  - Any email/password combination is accepted for demo purposes.
-  - Logging in as `admin@bookstore.com` enables admin features.
-- **Register:**  
-  - Registration is simulated; no real user database.
+The Flutter client uses **supabase_flutter**, which exposes Supabase **Auth** and **PostgREST**-backed tables. Schema source of truth: `backend/supabase/schema.sql`; policies: `backend/supabase/rls.sql`.
 
----
+### Authentication
 
-## Books
-- **Get all books:**  
-  - Books are fetched from Open Library API at runtime and cached locally.
-- **Get book by ID:**  
-  - Books are identified by their Open Library ID.
-- **Add to library:**  
-  - User must "purchase" (simulated payment) before adding a book to their library.
-- **Wishlist/Favorites:**  
-  - Add/remove books to/from wishlist and favorites, stored locally.
+- Real sign-in/sign-up when `SUPABASE_URL` and `SUPABASE_ANON_KEY` are set at compile time.
+- If those are missing, `AuthService` falls back to **mock users** for local development (see `lib/services/auth_service.dart`).
 
----
+### Data tables (summary)
 
-## Cart & Checkout
-- **Add to cart:**  
-  - Books can be added to a cart for simulated checkout.
-- **Checkout:**  
-  - Simulates a $5 payment per book, then adds books to the user's library and order history.
+| Area | Tables (see schema for columns) |
+|------|----------------------------------|
+| Profile | `profiles` |
+| Library | `library_items`, `book_files` |
+| Reader | `reading_progress`, `annotations` |
+| Ops | `schema_migrations`, `sync_events` |
 
----
+Row-level security is required for any client-facing access; do not bypass RLS with service keys in the mobile app.
 
-## Orders
-- **Order history:**  
-  - Each checkout creates an order, stored locally in the user's order history.
-- **Order details:**  
-  - Each order contains a list of books, total amount, and timestamp.
+### Client responsibilities
 
----
+`SupabaseSyncService` upserts and merges remote rows with local models using `ConflictResolver`. File paths remain device-local; remote rows never overwrite local filesystem paths.
 
-## Admin Dashboard
-- **Access:**  
-  - Only visible for `admin@bookstore.com`.
-- **Features:**  
-  - User overview (current user only in local mode)
-  - Analytics: total orders, total sales, most popular books
+## Discovery microservice (optional)
 
----
+Default base URL is configurable via `DISCOVERY_API_BASE_URL` (see root `README.md`). Implementation: `backend/discovery-service/app/main.py`.
 
-## Error Handling
-- Most errors are shown as SnackBars in the UI.
-- No persistent error logs.
+### `GET /health`
 
----
+Returns `{"status": "ok"}` for load balancers and smoke checks.
 
-## Notes
-- **No real API endpoints exist.**  
-- **No data is persisted to a backend.**  
-- **All logic is handled in Dart code and local storage.**
+### `GET /search`
 
----
+- **Query parameters:** `query` or `q` (search string), optional `include_anna` (server also needs Anna credentials via env).
+- **Behavior:** merges **Open Library** results with optional **Anna’s Archive** when `ANNAS_SECRET_KEY` or `ANNAS_API_KEY` is set on the server.
+- **Response:** JSON matching `SearchResponse` in `backend/discovery-service/app/schemas.py`.
 
-_Last updated: June 2025_ 
+### `POST /download/preflight`
+
+- **Body:** JSON with a `url` field (`DownloadPreflightRequest`).
+- **Behavior:** validates URL safety (`preflight_url` module), performs a `HEAD` request, checks MIME type and size hints.
+- **Response:** `allowed`, optional `reason`, `mime_type`, `content_length` (`DownloadPreflightResponse`).
+
+For local HTTP targets, the server may require `ALLOW_HTTP_PREFLIGHT=1` (development only).
+
+## External HTTP (client-side adapters)
+
+When the discovery API base URL is **empty**, the app can use **Open Library** and optional **Anna** adapters directly from Dart (`lib/features/discovery/data/`). Rate limits and terms of upstream APIs apply.
+
+## Local-only APIs
+
+There is **no** separate REST server inside the Flutter process. Local state is accessed through repositories (`LocalLibraryRepository`, `LocalReaderRepository`, `SyncRetryRepository`) backed by Drift/SQLite.

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/profile_provider.dart';
-import '../models/book.dart';
+
+import '../features/library/presentation/providers/library_provider.dart';
 import '../providers/app_provider.dart';
+import '../providers/profile_provider.dart';
+import '../providers/reading_stats_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -20,9 +22,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context
-          .read<ProfileProvider>()
-          .loadProfile(context.read<AppProvider>().userId!);
+      final uid = context.read<AppProvider>().userId;
+      if (uid != null) {
+        context.read<ProfileProvider>().loadProfile(uid);
+      }
     });
   }
 
@@ -40,21 +43,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Profile'),
-          backgroundColor: Colors.deepPurple,
-          foregroundColor: Colors.white,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Account'),
-              Tab(text: 'Order History'),
+              Tab(text: 'Reading'),
             ],
-            indicatorColor: Colors.white,
-            indicatorWeight: 4.0,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
           ),
         ),
         body: TabBarView(
@@ -64,7 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               displayNameController: _displayNameController,
               formKey: _formKey,
             ),
-            const _OrderHistoryTab(),
+            const _ReadingStatsTab(),
           ],
         ),
       ),
@@ -73,21 +66,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
 }
 
 class _AccountTab extends StatelessWidget {
-  final TextEditingController emailController;
-  final TextEditingController displayNameController;
-  final GlobalKey<FormState> formKey;
-
   const _AccountTab({
     required this.emailController,
     required this.displayNameController,
     required this.formKey,
   });
 
+  final TextEditingController emailController;
+  final TextEditingController displayNameController;
+  final GlobalKey<FormState> formKey;
+
   @override
   Widget build(BuildContext context) {
     return Consumer<ProfileProvider>(
       builder: (context, profileProvider, child) {
-        // Initialize controllers with current values
         if (emailController.text.isEmpty && profileProvider.email.isNotEmpty) {
           emailController.text = profileProvider.email;
         }
@@ -101,53 +93,26 @@ class _AccountTab extends StatelessWidget {
           child: Form(
             key: formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Profile Picture Section
                 Center(
-                  child: Column(
-                    children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.deepPurple,
-                        child: Icon(
-                          Icons.person,
-                          size: 50,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        profileProvider.displayName.isNotEmpty
-                            ? profileProvider.displayName
-                            : 'User',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                  child: CircleAvatar(
+                    radius: 48,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
+                    child: Icon(
+                      Icons.person_rounded,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 32),
-
-                // Account Information Section
-                const Text(
-                  'Account Information',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Display Name
+                const SizedBox(height: 24),
                 TextFormField(
                   controller: displayNameController,
                   decoration: const InputDecoration(
-                    labelText: 'Display Name',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
+                    labelText: 'Display name',
+                    prefixIcon: Icon(Icons.badge_outlined),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -157,14 +122,11 @@ class _AccountTab extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 16),
-
-                // Email
                 TextFormField(
                   controller: emailController,
                   decoration: const InputDecoration(
                     labelText: 'Email',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email),
+                    prefixIcon: Icon(Icons.email_outlined),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -178,59 +140,27 @@ class _AccountTab extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 24),
-
-                // Save Account Info Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      if (formKey.currentState!.validate()) {
-                        final scaffoldMessenger = ScaffoldMessenger.of(context);
-                        final userId = context.read<AppProvider>().userId!;
-                        await profileProvider.updateDisplayName(
-                            userId, displayNameController.text);
-                        await profileProvider.updateEmail(
-                            userId, emailController.text);
-                        scaffoldMessenger.showSnackBar(
-                          const SnackBar(
-                              content: Text('Profile updated successfully!')),
+                FilledButton(
+                  onPressed: () async {
+                    if (formKey.currentState!.validate()) {
+                      final uid = context.read<AppProvider>().userId;
+                      if (uid == null) return;
+                      await profileProvider.updateDisplayName(
+                        uid,
+                        displayNameController.text,
+                      );
+                      await profileProvider.updateEmail(
+                        uid,
+                        emailController.text,
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Profile updated')),
                         );
                       }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: const Text('Save Changes'),
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Change Password Section
-                const Text(
-                  'Change Password',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Change Password Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      _showChangePasswordDialog(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: const Text('Change Password'),
-                  ),
+                    }
+                  },
+                  child: const Text('Save'),
                 ),
               ],
             ),
@@ -239,196 +169,87 @@ class _AccountTab extends StatelessWidget {
       },
     );
   }
-
-  void _showChangePasswordDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Change Password'),
-        content: const Text(
-          'This is a simulated password change. In a real app, this would:\n\n'
-          '• Verify the current password\n'
-          '• Validate the new password\n'
-          '• Update the password securely\n'
-          '• Send a confirmation email',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Password changed successfully!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-class _OrderHistoryTab extends StatelessWidget {
-  const _OrderHistoryTab();
+class _ReadingStatsTab extends StatelessWidget {
+  const _ReadingStatsTab();
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ProfileProvider>(
-      builder: (context, profileProvider, child) {
-        if (profileProvider.orderHistory.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.receipt_long, size: 64, color: Colors.grey[400]),
-                const SizedBox(height: 16),
-                Text(
-                  'No orders yet',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Your order history will appear here',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                ),
-              ],
-            ),
-          );
-        }
+    return Consumer2<LibraryProvider, ReadingStatsProvider>(
+      builder: (context, library, stats, _) {
+        final total = library.items.length;
+        final reading = library.currentlyReading.length;
+        final done = library.finished.length;
 
-        return ListView.builder(
+        return ListView(
           padding: const EdgeInsets.all(16),
-          itemCount: profileProvider.orderHistory.length,
-          itemBuilder: (context, index) {
-            final order = profileProvider.orderHistory[index];
-            return _OrderCard(order: order);
-          },
+          children: [
+            Text(
+              'Library overview',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            _StatTile(
+              icon: Icons.library_books_outlined,
+              label: 'Books in library',
+              value: '$total',
+            ),
+            _StatTile(
+              icon: Icons.bookmark_outline_rounded,
+              label: 'Currently reading',
+              value: '$reading',
+            ),
+            _StatTile(
+              icon: Icons.check_circle_outline_rounded,
+              label: 'Finished',
+              value: '$done',
+            ),
+            _StatTile(
+              icon: Icons.timer_outlined,
+              label: 'Time in reader (local)',
+              value: stats.formattedTotalTime,
+            ),
+            _StatTile(
+              icon: Icons.menu_book_outlined,
+              label: 'Reader sessions',
+              value: '${stats.readerOpens}',
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Reading time is tracked on this device only.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
         );
       },
     );
   }
 }
 
-class _OrderCard extends StatelessWidget {
-  final Order order;
+class _StatTile extends StatelessWidget {
+  const _StatTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
-  const _OrderCard({required this.order});
+  final IconData icon;
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: ExpansionTile(
-        title: Text(
-          'Order #${order.id.substring(order.id.length - 8)}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(label),
+        trailing: Text(
+          value,
+          style: Theme.of(context).textTheme.titleMedium,
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Date: ${_formatDate(order.orderDate)}'),
-            Text('Total: \$${order.totalAmount.toStringAsFixed(2)}'),
-            Text('Status: ${order.status}'),
-          ],
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                const Divider(),
-                const SizedBox(height: 8),
-                ...order.books.map((book) => _OrderBookItem(book: book)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
-}
-
-class _OrderBookItem extends StatelessWidget {
-  final Book book;
-
-  const _OrderBookItem({required this.book});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          // Book cover
-          Container(
-            width: 50,
-            height: 75,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4),
-              color: Colors.grey[200],
-            ),
-            child: book.coverImage.isNotEmpty
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: Image.network(
-                      book.coverImage,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Center(
-                          child: Icon(Icons.book, size: 20, color: Colors.grey),
-                        );
-                      },
-                    ),
-                  )
-                : const Center(
-                    child: Icon(Icons.book, size: 20, color: Colors.grey),
-                  ),
-          ),
-          const SizedBox(width: 16),
-          // Book details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  book.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  book.author,
-                  style: TextStyle(color: Colors.grey[600]),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          // Price
-          Text(
-            '\$${book.price.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.green,
-            ),
-          ),
-        ],
       ),
     );
   }
