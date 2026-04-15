@@ -10,6 +10,6 @@
 | [packaging_profile.md](packaging_profile.md) | Build profiles and packaging notes. |
 | [two_device_validation.md](two_device_validation.md) | Multi-device sync validation scenarios. |
 
-The **GitHub Pages** site uses Jekyll with the [Minimal](https://github.com/pages-themes/minimal) theme and custom SCSS aligned with the app’s orange accent (`#EA580C`) and warm surfaces — see [`_config.yml`](_config.yml) and [`assets/css/style.scss`](assets/css/style.scss). The published homepage is [`index.md`](index.md) (Supabase **Site URL** / **Redirect URL**). See [Adding a Jekyll theme on GitHub Pages](https://docs.github.com/en/pages/setting-up-a-github-pages-site-with-jekyll/adding-a-theme-to-your-github-pages-site-using-jekyll).
+The static file [`index.html`](index.html) is the **GitHub Pages** landing page used as Supabase **Site URL** / **Redirect URL** for email confirmation (see repo Settings → Pages). The empty [`.nojekyll`](.nojekyll) file disables Jekyll so this HTML is served as-is.
 
 Supabase SQL artifacts live under `backend/supabase/` (see `backend/README.md`). The Flutter app root `README.md` covers run commands and environment variables.
